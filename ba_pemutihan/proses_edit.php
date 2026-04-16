@@ -1349,16 +1349,16 @@ try {
             $full_new_ba['dept_avp_engineering'] = '-';
             $full_new_ba['jabatan_dept_avp_engineering'] = '-';
 
-            resetApprovalActorFields($full_new_ba, 2);
             resetApprovalActorFields($full_new_ba, 3);
-            resetApprovalActorFields($full_new_ba, 4);
+            resetApprovalActorFields($full_new_ba, 5);
+            resetApprovalActorFields($full_new_ba, 8);
         }
 
         /* dari bukan PKS ke PKS -> aktor PKS baru muncul */
         if (!$old_is_pks && $new_is_pks) {
-            resetApprovalActorFields($full_new_ba, 2);
             resetApprovalActorFields($full_new_ba, 3);
-            resetApprovalActorFields($full_new_ba, 4);
+            resetApprovalActorFields($full_new_ba, 5);
+            resetApprovalActorFields($full_new_ba, 6);
         }
 
         /* dari kebun 1 ke non kebun 1 -> VP hilang */
@@ -1366,11 +1366,11 @@ try {
             $full_new_ba['vice_president'] = '-';
             $full_new_ba['jabatan_vice_president'] = '-';
 
-            resetApprovalActorFields($full_new_ba, 8);
+            resetApprovalActorFields($full_new_ba, 7);
         }
 
         if (!$old_is_kebun_1 && $new_is_kebun_1) {
-            resetApprovalActorFields($full_new_ba, 8);
+            resetApprovalActorFields($full_new_ba, 7);
         }
 
         $main_update_data = array(
