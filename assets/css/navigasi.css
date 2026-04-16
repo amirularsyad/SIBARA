@@ -1,0 +1,282 @@
+.navigasi-bungkus {
+    height: max-content;
+    width: 100%;
+    position: fixed;
+    bottom: 10px;
+}
+
+.navigasibar{
+    height: 70px;
+    width: max-content;
+    border-radius: 75px;
+    padding: 0 50px;
+    box-shadow: 0px -10px 10px rgba(0, 0, 0,0.1);
+    background-color: #02367b;
+    /* background: linear-gradient(70deg,rgba(212, 212, 212, 1) 6%, #45a247, #162768); */
+}
+
+.navmenu{
+    height: 100%;
+}
+
+.navmenu li{
+    width: 200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.navmenu li h1{
+    font-size: 2rem;
+    color: #fff;
+}
+
+.navmenu li:first-child, .navmenu li:last-child {
+    background-color: transparent;
+    transition: all 0.3s ease-in-out;
+}
+
+.navmenu li:first-child:hover, .navmenu li:last-child:hover{
+    background-color: #006ca5;
+    transition: all 0.3s ease-in-out;
+}
+
+.quick-access:hover{
+    background-color: #006ca5;
+    transition: all 0.3s ease-in-out;
+    transform: translateY(-30%);
+}
+
+.quick-access {
+    width: 100px;
+    height: 100px;
+    background-color: #02367b;
+    z-index: 99;
+    transition: all 0.3s ease-in-out;
+    transform: translateY(-20%);
+}
+.navigasibar.active .quick-access {
+    transform: translateY(-50%) rotate(225deg);
+    background-color: #07da63;
+}
+
+.circular {
+    width: 350px;
+    height: 180px;
+    background-color: #02367b;
+    border-bottom-left-radius: 200px;
+    border-bottom-right-radius: 200px;
+    z-index: -8 ;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    transform-origin: top center;
+    transition: all .3s ease-in-out;
+}
+
+
+
+.navigasibar.active .circular{
+    transform: translateX(-50%) rotate(180deg);
+    transition: all 1s ease-in-out;
+}
+
+.circularbg{
+    width: 355px;
+    height: 185px;
+    background-color: #02367b;
+    z-index: -7;
+}
+
+.navigasibar.active .circularbg{
+    transform: translateX(-50%) rotate(155deg);
+    transition: all .9s ease-in-out;
+}
+
+.circularbg1{
+    width: 360px;
+    height: 190px;
+    background-color: #02367b;
+    z-index: -6;
+}
+
+.navigasibar.active .circularbg1{
+    transform: translateX(-50%) rotate(130deg);
+    transition: all .8s ease-in-out;
+}
+
+.circularbg2{
+    width: 365px;
+    height: 195px;
+    background-color: #02367b;
+    z-index: -5;
+}
+
+.navigasibar.active .circularbg2{
+    transform: translateX(-50%) translateY(-2px) rotate(105deg);
+    transition: all .7s ease-in-out;
+}
+
+.circularbg3{
+    width: 360px;
+    height: 190px;
+    background-color: #02367b;
+    z-index: -4;
+}
+
+.navigasibar.active .circularbg3{
+    transform: translateX(-50%) translateY(-9px) rotate(75deg);
+    transition: all .6s ease-in-out;
+}
+
+.circularbg4{
+    width: 360px;
+    height: 190px;
+    background-color: #02367b;
+    z-index: -3;
+}
+
+.navigasibar.active .circularbg4{
+    transform: translateX(-51%) translateY(-10px) rotate(50deg);
+    transition: all .5s ease-in-out;
+}
+
+.circularbg5{
+    width: 360px;
+    height: 190px;
+    background-color: #02367b;
+    z-index: -2;
+}
+
+.navigasibar.active .circularbg5{
+    transform: translateX(-53%) translateY(-5px) rotate(25deg);
+    transition: all .4s ease-in-out;
+}
+
+.circular1 a{
+    cursor: pointer;
+    width: max-content;
+    height: max-content;
+}
+
+.circular-icons{
+    position: absolute; 
+    left: 20px; 
+    top: 10px; 
+    transform: rotate(180deg);
+    width: 42px;
+    height:42px; 
+    display: flex; 
+    justify-content: center;
+    align-items: center;
+}
+.circular-icons2{transform: rotate(205deg);}
+.circular-icons3{transform: rotate(230deg);}
+.circular-icons4{transform: rotate(255deg);}
+.circular-icons5{transform: rotate(285deg);}
+.circular-icons6{transform: rotate(310deg);}
+.circular-icons7{transform: rotate(335deg);}
+
+
+.penutup-circular {
+    position: absolute;
+    width: 100%;
+    height: 100px;
+    background-color: white;
+    position: absolute;
+    left: 0%;
+    bottom: -40px;
+    z-index: -1;
+}
+
+.dokumen{
+    position: absolute;
+    bottom: 10%;
+    left: 0;
+    width: 360px;
+    height: 0px;
+    z-index: -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: auto;
+    transition: all 0.3s ease-in-out;
+    overflow-y: hidden;
+    border-radius: 30px 30px 0 30px;
+    overflow-x: hidden;
+    background-color: rgba(0, 123, 255,0.1);
+}
+
+.dokumen.tabelaktif{height: 420px;transition: all 0.3s ease-in-out;}
+
+.dokumen td{
+    width: 60px;
+    height: 50px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.dokumen tbody tr td a{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    z-index: 1;
+}
+
+.btnaktif{
+    background-color: #02367b;
+}
+
+.dokumenbtn2{
+    width: 100%;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+    transition: all 1.5s ease-in-out;
+    z-index: 2;
+    background-color: #02367b;
+}.dokumenbtn2:last-child{cursor: default;}
+
+.dokumenbtn2info{
+    z-index: -1; 
+    position: absolute; 
+    padding: 1px;
+    padding-right: 15px;
+    background-color: transparent;
+    left: 30px;
+    top: 0;
+    width: 0;
+    height: 50px;
+    display: flex;
+    justify-content: end;
+    align-items: center;
+    transition: all .5s ease-in-out;
+}.dokumen tr:first-child .dokumenbtn2info{border-radius: 0 30px 0 0;} .dokumen tr:nth-child(7) .dokumenbtn2info{border-radius: 0 0 30px 0;}
+.dokumenbtn2info h3{
+    color: transparent;
+    font-size: 1.2rem;
+    transition: all .1s ease-in-out;
+}
+.dokumen tr td a:hover .dokumenbtn2info{width: 330px;transition: all .5s ease-in-out;background-color: #02367b;}
+.dokumen tr td a:hover .dokumenbtn2info h3{color:#fff;transition: all .5s ease-in-out;transition-delay: .3s;}
+
+.dokumen tr:first-child td .dokumenbtn2{
+    border-radius: 30px 30px 0 0;
+}
+.dokumenbtn2:hover{
+    background-color: #006ca5;
+    transition: all 0.3s ease-in-out;
+}.dokumen tbody tr:last-child .dokumenbtn2:hover{background-color:#007bff;}
+
+.bi-plus-lg,.bi-folder2,.bi-folder2-open, .bi-arrows-collapse-vertical {
+    font-size: 3rem;
+}
+.bi-file-earmark-text-fill,.bi-router,.bi-cash-coin,.bi-unlock,.bi-journal-bookmark-fill,.bi-building-fill-add,.bi-truck{
+    color: #fff;
+    font-size: 1.5rem;
+}

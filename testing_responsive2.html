@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- Bootstrap 3.4.1 -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+
+<!-- Font Awesome 4.7 -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+<!-- Ionicons (opsional, dipakai di AdminLTE 2) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/2.0.1/css/ionicons.min.css">
+
+<!-- AdminLTE 2.4.18 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@2.4.18/dist/css/AdminLTE.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/admin-lte@2.4.18/dist/css/skins/_all-skins.min.css">
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" href="assets/img/logo.png">
+
+
+  <!-- Chart.js 2.9.4 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.min.js"></script>
+<style>
+  body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: #f9f9f9;
+}
+
+/* tombol animasi */
+.tombol-ba-kerusakan,
+.tombol-ba-kerusakan-pen {
+  width: 50px;
+  height: 100%;
+  right: 0;
+  -webkit-transform: translateY(-60%);
+  transform: translateY(-60%);
+  -webkit-transition: all .3s ease-in-out !important;
+  transition: all .3s ease-in-out !important;
+}
+.tombol-ba-kerusakan:hover {
+  width: 100%;
+  -webkit-transform: translateY(0);
+  transform: translateY(0);
+  z-index: 1;
+}
+.tombol-ba-kerusakan-pen {
+  right: 50px;
+}
+.tombol-ba-kerusakan-pen:hover {
+  width: 100%;
+  -webkit-transform: translateY(0) translateX(50px);
+  transform: translateY(0) translateX(50px);
+  z-index: 1;
+}
+
+/* teks animasi */
+.teks-ba-kerusakan,
+.teks-ba-kerusakan-pen {
+  font-size: 32px;
+  -webkit-transform: translateY(20px);
+  transform: translateY(20px);
+  -webkit-transition: all .3s ease-in-out;
+  transition: all .3s ease-in-out;
+}
+.tombol-ba-kerusakan:hover .teks-ba-kerusakan {
+  font-size: 64px;
+  -webkit-transform: translateY(-50px);
+  transform: translateY(-50px);
+}
+.tombol-ba-kerusakan-pen:hover .teks-ba-kerusakan-pen {
+  font-size: 64px;
+  -webkit-transform: translateY(-50px);
+  transform: translateY(-50px);
+}
+
+nav {
+  margin-bottom: 40px;
+}
+
+.button-navigation-bar {
+  background-color: transparent;
+  color: white;
+  border-radius: 5px;
+  border: #f9f9f9 1px solid;
+  padding: 8px 12px;
+  text-decoration: none;
+}
+.button-navigation-bar:hover {
+  background-color: green;
+  color: white;
+  border: #f9f9f9 1px solid;
+}
+
+#date {
+  margin-right: 10px;
+}
+#clock {
+  font-size: 16px;
+  color: white;
+  margin-right: 20px;
+}
+
+/* warna gradient sidebar & navbar */
+.sidebar {
+  background: -webkit-linear-gradient(top left, #3e02be 0%, rgb(1, 64, 159) 50%, rgb(2, 59, 159) 100%) !important;
+  background: linear-gradient(to bottom right, #3e02be 0%, rgb(1, 64, 159) 50%, rgb(2, 59, 159) 100%) !important;
+}
+.navbar {
+  background: -webkit-linear-gradient(left, rgb(1, 64, 159) 0%, rgb(2, 77, 190) 60%, rgb(2, 77, 207) 100%) !important;
+  background: linear-gradient(to right, rgb(1, 64, 159) 0%, rgb(2, 77, 190) 60%, rgb(2, 77, 207) 100%) !important;
+}
+.custom-color{
+  color: white !important;
+  background: -webkit-linear-gradient(top left, #3e02be 0%, rgb(1, 64, 159) 50%, rgb(2, 59, 159) 100%) !important;
+  background: linear-gradient(to bottom right, #3e02be 0%, rgb(1, 64, 159) 50%, rgb(2, 59, 159) 100%) !important;
+}
+
+h2, h3 {
+  color: #2c3e50;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.app-main {
+  display: -webkit-box;      /* fallback Safari lama */
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  padding-top: 40px;
+}
+
+.bi-check-circle {
+  color: green;
+  font-size: 50px;
+}
+
+/* form */
+form {
+  background: #ffffff;
+  width: 95%;
+  padding: 25px 30px;
+  border-radius: 10px;
+}
+.form-section { margin-bottom: 20px; }
+
+label {
+  display: block; /* jangan flex di Safari lama */
+  margin: 15px 0 8px 0;
+  font-weight: 500;
+  font-size: small;
+}
+input, textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-sizing: border-box;
+  background-color: #f5f5f5;
+  font-size: 14px;
+}
+textarea { resize: vertical; min-height: 60px; }
+
+.gambar-wrapper { margin-bottom: 5px; }
+
+/* tombol */
+input[type="submit"] {
+  background: #2980b9;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 5px;
+  margin-top: 20px;
+}
+input[type="submit"]:hover { background: #1c5980; }
+
+/* akun info */
+.akun-info { right:-300px; opacity: 0; }
+.aktif { right: 0; opacity: 1; -webkit-transition: all .3s ease-in-out; transition: all .3s ease-in-out; }
+.display-state { display:none; }
+
+.bi-list, .bi-arrows-fullscreen, .bi-fullscreen-exit { color: #fff !important; }
+.custom-footer { background-color: white; }
+
+/* responsive */
+@media (max-width: 1024px) {
+  .custom-footer {
+    position:absolute !important;
+    bottom: 0;
+    width: 100%;
+  }
+  .custom-main {
+    padding-bottom: 100px;
+    height: auto;
+    padding-top: 10px;
+  }
+}
+@media (max-width: 450px) {
+  #date, #clock { display: none; }
+}
+
+/* Gradient background */
+.background-gradasi-biru-ungu {
+  background: -webkit-linear-gradient(top left, #1702d5, #3953f9, #0012ce, #3262ff, #5e74ff);
+  background: linear-gradient(to bottom right, #1702d5, #3953f9, #0012ce, #3262ff, #5e74ff);
+  background-size: 300% 300%;
+  -webkit-animation: gradient-shift 24s ease infinite;
+  animation: gradient-shift 24s ease infinite;
+}
+@-webkit-keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Gradient text */
+.gradient-text {
+  font-size: 3rem;
+  font-weight: bold;
+  background: -webkit-linear-gradient(top left, #1702d5, #2100a5, #0012ce, #3262ff, #5e74ff);
+  background: linear-gradient(to bottom right, #1702d5, #2100a5, #0012ce, #3262ff, #5e74ff);
+  background-size: 300% 300%;
+  /* -webkit-background-clip: text; */
+  -webkit-text-fill-color: transparent;
+  -webkit-animation: gradient-shift 4s ease infinite;
+  animation: gradient-shift 4s ease infinite;
+}
+</style>
+  
+  <style>
+    .chart-container {
+      position: relative;
+      height: 400px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body class="hold-transition sidebar-collapse custom-color">
+
+<div class="wrapper">
+  <!-- Main Header -->
+  <header class="main-header">
+    <!-- Logo -->
+    <a href="#" class="logo">
+      <span class="logo-mini"><b>BA</b></span>
+      <span class="logo-lg"><b>Berita</b>Acara</span>
+    </a>
+
+    <!-- Header Navbar -->
+    <nav class="navbar navbar-static-top" role="navigation">
+      <!-- Sidebar toggle button-->
+      <a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button">
+        <span class="sr-only">Toggle navigation</span>
+      </a>
+      <div class="navbar-custom-menu">
+        <ul class="nav navbar-nav">
+          <!-- Fullscreen (tidak semua Safari dukung API ini, bisa dihilangkan) -->
+          <li class="dropdown">
+            <a href="#" onclick="toggleFullScreen(); return false;">
+              <i class="fa fa-arrows-alt"></i>
+            </a>
+          </li>
+          <!-- Clock -->
+          <li class="dropdown user user-menu">
+            <a href="#">
+              <span id="date" class="hidden-xs"></span>
+              <span id="clock"></span>
+            </a>
+          </li>
+          <!-- User Account -->
+          <li class="dropdown user user-menu">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+              <img src="assets/img/logo.png" class="user-image" alt="User Image">
+              <span class="hidden-xs">Nama User</span>
+            </a>
+            <ul class="dropdown-menu">
+              <li class="user-header">
+                <img src="assets/img/logo.png" class="img-circle" alt="User Image">
+                <p>
+                  Nama User - Hak Akses
+                </p>
+              </li>
+              <li class="user-footer">
+                <div class="pull-right">
+                  <a href="#" onclick="return confirm('Yakin ingin logout?')" class="btn btn-danger btn-flat">Logout</a>
+                </div>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </nav>
+  </header>
+
+  <!-- Left side column -->
+  <aside class="main-sidebar">
+    <section class="sidebar">
+      <ul class="sidebar-menu" data-widget="tree">
+        <li class="header">LIST BERITA ACARA</li>
+        <li><a href="#"><i class="fa fa-newspaper-o"></i> <span>BA Kerusakan</span></a></li>
+        <li><a href="#"><i class="fa fa-newspaper-o"></i> <span>BA Pengembalian</span></a></li>
+        <li class="treeview">
+          <a href="#"><i class="fa fa-newspaper-o"></i> <span>BA Serah Terima</span>
+            <span class="pull-right-container"><i class="fa fa-angle-left pull-right"></i></span>
+          </a>
+          <ul class="treeview-menu">
+            <li><a href="#"><i class="fa fa-laptop"></i> Notebook</a></li>
+          </ul>
+        </li>
+        <li class="header">USER</li>
+        <li>
+          <a href="#">
+            <i class="fa fa-clipboard"></i> <span>Approve BA</span>
+            <span class="pull-right-container">
+              <small class="label pull-right bg-red">3</small>
+            </span>
+          </a>
+        </li>
+        <li class="header">MASTER</li>
+        <li><a href="#"><i class="fa fa-user"></i> <span>Data Akun</span></a></li>
+      </ul>
+    </section>
+  </aside>
+
+  <!-- Content Wrapper -->
+  <div class="content-wrapper">
+    <section class="content-header text-black">
+      <h1>Grafik Data Berita Acara 2025</h1>
+    </section>
+
+    <section class="content">
+      <div class="box box-primary">
+        <div class="box-header with-border">
+          <h3 class="box-title">Chart Example</h3>
+        </div>
+        <div class="box-body">
+          <div class="chart-container">
+            <canvas id="baGab"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Footer -->
+  <footer class="main-footer">
+    <div class="pull-right hidden-xs">Safari 9.3.5 Compatible</div>
+    <strong>&copy; 2025 Testing AdminLTE</strong>
+  </footer>
+</div>
+
+<!-- jQuery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<!-- Bootstrap 3.4.1 JS -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<!-- SlimScroll -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-slimScroll/1.3.8/jquery.slimscroll.min.js"></script>
+<!-- FastClick -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fastclick/1.0.6/fastclick.min.js"></script>
+<!-- AdminLTE App -->
+<script src="https://cdn.jsdelivr.net/npm/admin-lte@2.4.18/dist/js/adminlte.min.js"></script>
+
+<script>
+  // Safari 9 tidak support const/let → pakai var
+  var labels = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]; 
+  var dataKerusakan = [5, 8, 6, 4, 7, 9, 3, 5, 6, 8, 7, 4];
+  var dataPengembalian = [3, 6, 4, 7, 5, 8, 6, 4, 5, 7, 6, 3];
+  var dataSerahTerima  = [2, 4, 3, 6, 5, 4, 3, 5, 4, 6, 5, 2];
+
+  var ctx5 = document.getElementById("baGab").getContext("2d");
+  var chart = new Chart(ctx5, {
+    type: "line", 
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: "Jumlah BA Kerusakan Aset",
+          data: dataKerusakan,
+          borderColor: "#f74242",
+          backgroundColor: "rgba(247,66,66,0.2)",
+          fill: true,
+          lineTension: 0.4
+        },
+        {
+          label: "Jumlah BA Pengembalian Inventaris",
+          data: dataPengembalian,
+          borderColor: "#0ba064",
+          backgroundColor: "rgba(11,160,100,0.2)",
+          fill: true,
+          lineTension: 0.4
+        },
+        {
+          label: "Jumlah BA Serah Terima Notebook",
+          data: dataSerahTerima,
+          borderColor: "#64adf5",
+          backgroundColor: "rgba(100,194,245,0.2)",
+          fill: true,
+          lineTension: 0.4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      legend: { position: "top" },
+      title: {
+        display: true,
+        text: "Grafik Data Berita Acara Tahun 2025"
+      },
+      scales: {
+        yAxes: [{ ticks: { beginAtZero: true } }],
+        xAxes: [{ ticks: { autoSkip: false } }]
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

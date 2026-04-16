@@ -1,0 +1,3537 @@
+<?php
+session_start();
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header("Location: ../login_registrasi.php");
+    exit();
+}
+if (!isset($_SESSION['hak_akses']) || $_SESSION['hak_akses'] !== 'Admin') {
+    header("Location: ../personal/approval.php");
+    exit();
+}
+
+//setup akses
+include '../koneksi.php';
+$manajemen_akun_akses = 0;
+if (isset($_SESSION['nama'])) {
+    $namaLogin = $_SESSION['nama'];
+    $sqlAkses = "SELECT manajemen_akun_akses, warna_menu FROM akun_akses WHERE nama = ? LIMIT 1";
+    if ($stmt = $koneksi->prepare($sqlAkses)) {
+        $stmt->bind_param("s", $namaLogin);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($res && $rowAkses = $res->fetch_assoc()) {
+            $manajemen_akun_akses = (int)$rowAkses['manajemen_akun_akses'];
+            $warna_menu = $rowAkses['warna_menu'];
+            $_SESSION['manajemen_akun_akses'] = $manajemen_akun_akses;
+        }
+        $stmt->close();
+    }
+}
+
+$showDataAkunMenu = false;
+
+if ($_SESSION['hak_akses'] === 'Super Admin') {
+    $showDataAkunMenu = true;
+} else {
+    if ($manajemen_akun_akses === 1) {
+        $showDataAkunMenu = true;
+    }elseif ($manajemen_akun_akses === 2) {
+        $showDataAkunMenu = true;
+    }
+}
+
+//Warna Menu
+if ($warna_menu == "0" || $warna_menu === "" || is_null($warna_menu)) {
+    // default (gradient)
+    $bgMenu = 'linear-gradient(to bottom right, #3e02be 0%, rgb(1, 64, 159) 50%, rgb(2, 59, 159) 100%)';
+} else {
+    $bgMenu = $warna_menu;
+}
+
+//Warna Navbar
+if ($warna_menu == "0" || $warna_menu === "" || is_null($warna_menu)) {
+    // default (gradient)
+    $bgNav = 'linear-gradient(to bottom right, #3e02be 0%, rgb(1, 64, 159) 50%, rgb(2, 59, 159) 100%)';
+} else {
+    $bgNav = $warna_menu;
+}
+
+if ($warna_menu === "0" || $warna_menu === "" || is_null($warna_menu)) {
+    // default pakai gradient
+    $textColorStyle = 'font-size: 3rem;
+      font-weight: bold;
+      background: linear-gradient(to bottom right,
+        #1702d5,
+        #2100a5,
+        #0012ce,
+        #3262ff,
+        #5e74ff
+      );
+      background-size: 300% 300%;
+      animation: gradient-shift 4s ease infinite;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: transparent;';
+} else {
+
+    $textColorStyle = 'font-size: 3rem;
+      font-weight: bold;
+      color: ' . $warna_menu . ';';
+}
+
+$jumlah_approval_notif = require '../approval_notification_badge.php';
+
+?>
+<?php 
+$ptSekarang = $_SESSION['pt'];
+if (is_array($ptSekarang)) {
+    $ptSekarang = reset($ptSekarang);
+}
+$ptSekarang = trim($ptSekarang);
+?>
+<?php
+    $pt_session = $_SESSION['pt'];
+
+    if (is_array($pt_session)) {
+        $pt_session = reset($pt_session);
+    }
+    $pt_session = trim($pt_session);
+?>
+
+<?php
+    //form input
+
+    $tanggal_hari_ini = date('Y-m-d');
+    $bulan_ini = date('m');
+    $tahun_ini = date('Y');
+
+    // Ambil nomor_ba tertinggi di bulan & tahun yang sama
+    $stmt2 = $koneksi->prepare("
+        SELECT nomor_ba 
+        FROM ba_serah_terima_asset
+        WHERE MONTH(tanggal) = ? AND YEAR(tanggal) = ? AND dihapus = 0 AND pt = '$pt_session'
+        ORDER BY CAST(nomor_ba AS UNSIGNED) DESC 
+        LIMIT 1
+        ");
+    $stmt2->bind_param("ss", $bulan_ini, $tahun_ini);
+    $stmt2->execute();
+    $result2 = $stmt2->get_result();
+    $row2 = $result2->fetch_assoc();
+
+    if ($row2 && is_numeric($row2['nomor_ba'])) {
+        $last_nomor = (int)$row2['nomor_ba'];
+        $nomor_ba_baru = str_pad($last_nomor + 1, 3, '0', STR_PAD_LEFT);
+    } else {
+        $nomor_ba_baru = '001';
+    }
+?>
+
+<!--Koneksi Atasan Karyawan-->
+<?php
+    // Ambil semua data Dept. Head
+    $query_atasan = $koneksi->query("SELECT nama, posisi, departemen FROM data_karyawan WHERE jabatan IN ('Dept. Head', 'AVP Head') ORDER BY nama ASC");
+    $data_atasan = [];
+    while ($row2 = $query_atasan->fetch_assoc()) {
+        $data_atasan[] = $row2;
+    }
+?>
+<!--Koneksi Nama Karyawan-->
+<?php
+    // Ambil semua data user, nanti difilter via JavaScript
+    $query_karyawan = $koneksi->query("SELECT nama, posisi, departemen, lantai, jabatan FROM data_karyawan ORDER BY nama ASC");
+    $data_karyawan = [];
+    while ($row2 = $query_karyawan->fetch_assoc()) {
+        $data_karyawan[] = $row2;
+    }
+?>
+
+<?php
+
+$query_pt = '';
+$pt_session_query = $_SESSION['pt'];
+if (is_array($pt_session_query)) {
+    $pt_session_query = reset($pt_session_query);
+}
+$pt_session_query = trim($pt_session_query);
+
+if ($pt_session_query === 'PT.MSAL (HO)') {
+    $query_pt = '1';
+} 
+elseif ($pt_session_query === 'PT.MSAL (PKS)') {
+    $query_pt = '2';
+} 
+elseif ($pt_session_query === 'PT.MSAL (SITE)') {
+    $query_pt = '3';
+} 
+elseif ($pt_session_query === 'PT.PSAM (PKS)') {
+    $query_pt = '4';
+} 
+elseif ($pt_session_query === 'PT.PSAM (SITE)') {
+    $query_pt = '5';
+} 
+elseif ($pt_session_query === 'PT.MAPA') {
+    $query_pt = '6';
+} 
+elseif ($pt_session_query === 'PT.PEAK (PKS)') {
+    $query_pt = '7';
+} 
+elseif ($pt_session_query === 'PT.PEAK (SITE)') {
+    $query_pt = '8';
+} 
+elseif ($pt_session_query === 'RO PALANGKARAYA') {
+    $query_pt = '9';
+} 
+elseif ($pt_session_query === 'RO SAMPIT') {
+    $query_pt = '10';
+} 
+else {
+    $query_pt = '';
+}
+
+$query_assets2 = "
+SELECT *
+FROM tb_assets
+LEFT JOIN tb_qty_assets ON tb_assets.qty_id = tb_qty_assets.id_qty
+WHERE tb_assets.id_pt = '$query_pt' AND tb_qty_assets.category IN ('PC KOMPUTER', 'LAPTOP','HANDPHONE','PRINTER')
+ORDER BY tb_qty_assets.category ASC
+";
+// WHERE tb_assets.id_pt = '$query_pt'
+$result_assets2 = $koneksi2->query($query_assets2);
+?>
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BA Serah Terima Penggunaan Inventaris</title>
+
+    <!-- Bootstrap 5 -->
+    <link 
+        rel="stylesheet" 
+        href="../assets/bootstrap-5.3.6-dist/css/bootstrap.min.css"
+    />
+
+    <!-- Bootstrap Icons -->
+    <link
+        rel="stylesheet"
+        href="../assets/icons/icons-main/font/bootstrap-icons.min.css"
+    />
+
+    <!-- AdminLTE -->
+    <link 
+        rel="stylesheet" 
+        href="../assets/adminlte/css/adminlte.css" 
+    />
+
+    <!-- OverlayScrollbars -->
+    <link
+        rel="stylesheet"
+        href="../assets/css/overlayscrollbars.min.css"
+    />
+
+    <!-- Favicon -->
+    <link 
+        rel="icon" type="image/png" 
+        href="../assets/img/logo.png"
+    />
+
+    <link 
+        rel="stylesheet" 
+        href="../assets/css/datatables.min.css"
+    />
+
+    <style> /* Main Styles */
+        .app-sidebar{
+            z-index: 11 !important;
+        }
+        .sidebar-overlay{
+            z-index: 10 !important;
+        }
+
+        .button-navigation-bar {
+            background-color: transparent;
+            color: white;
+            border-radius: 5px;
+            border: #f9f9f9 1px solid;
+            padding: 8px 12px;
+            text-decoration: none;
+        }
+
+        .button-navigation-bar:hover {
+            background-color: green;
+            color: white;
+            border: #f9f9f9 1px solid;
+        }
+
+        /* style table */
+
+        th,td,table tbody tr td .btn-sm{
+            font-size: .7rem;
+        }
+
+        th, td{
+            text-align: center !important;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f9f9f9;
+        }
+
+        .app-wrapper {
+            position: relative;
+        }
+
+        .custom-main {
+            overflow-y: hidden !important;
+        }
+
+        #date {
+            margin-right: 10px;
+        }
+
+        #clock {
+            font-size: 16px;
+            color: white;
+            margin-right: 20px;
+        }
+
+        /* .personalia-menu{
+        background:linear-gradient(135deg,#515bd4,#dd2a7b,#F58529);
+        transition: all .3s ease;
+        } */
+
+        .akun-info {
+            right: -300px;
+            opacity: 0;
+        }
+
+        .aktif {
+            right: 0;
+            opacity: 1;
+            transition: all .3s ease-in-out;
+        }
+
+        .display-state {
+            display: none;
+        }
+
+        .aktifLT {
+            display: flex;
+        }
+
+        .app-sidebar {
+            background: <?php echo $bgMenu; ?> !important;
+        }
+
+        .navbar {
+            background: <?php echo $bgNav; ?> !important;
+        }
+
+        h2,
+        h3,
+        h4 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .app-main {
+            display: flex;
+            align-items: center;
+            margin-top: 40px;
+        }
+
+        /* style table */
+
+        .table-wrapper {
+            width: 97%;
+            height: auto;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        th,
+        td,
+        table tbody tr td .btn-sm {
+            font-size: .7rem;
+        }
+
+        th,
+        td {
+            text-align: center !important;
+        }
+
+        #thead th:nth-child(1),
+        #tbody td:nth-child(1) {
+            width: 4%;
+            text-align: center;
+        }
+
+        /* No */
+        #thead th:nth-child(2),
+        #tbody td:nth-child(2) {
+            width: 6%;
+        }
+
+        /* Tanggal */
+        #thead th:nth-child(3),
+        #tbody td:nth-child(3) {
+            width: 6%;
+        }
+
+        /* Tanggal */
+        #thead th:nth-child(4),
+        #tbody td:nth-child(4) {
+            width: 10%;
+        }
+
+        /* Jenis Perangkat */
+        #thead th:nth-child(5),
+        #tbody td:nth-child(5) {
+            width: 220px;
+        }
+
+        /* Merek */
+        #thead th:nth-child(6),
+        #tbody td:nth-child(6) {
+            width: 220px;
+        }
+
+        /* User */
+        #thead th:nth-child(7),
+        #tbody td:nth-child(7) {
+            width: 200px;
+        }
+
+        /* Lokasi */
+        #thead th:nth-child(8),
+        #tbody td:nth-child(8) {
+            width: 350px;
+        }
+
+        /* Jenis Kerusakan */
+        /*th:nth-child(9), td:nth-child(9) { width: 50px; }   Status Approval 1 */
+        /*th:nth-child(10), td:nth-child(10) { width: 50px; }   Status Approval 2 */
+        #thead th:nth-child(11),
+        #tbody td:nth-child(11) {
+            width: 50px;
+            height: 100% !important;
+            text-align: center;
+        }
+
+        /* Actions */
+
+        #myTable2 td {
+            cursor: pointer;
+        }
+
+        .popupInput,
+        .popupEdit {
+
+            width: 100%;
+            padding: 25px 30px;
+            border-radius: 10px;
+        }
+
+        #popupBoxInput,
+        #popupBoxEdit,
+        #popupBoxDetail {
+            max-height: 80vh;
+            overflow-y: scroll;
+        }
+
+        input[type="submit"] {
+            background: #2980b9;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 20px;
+
+        }
+
+        input[type="submit"]:hover {
+            background: #1c5980;
+        }
+
+        .popup-box {
+            display: none;
+        }
+
+        .popup-bg {
+            display: none;
+        }
+
+        .aktifPopup {
+            display: flex;
+        }
+
+        #popupDetailTable th,
+        #popupDetailTable td {
+            white-space: nowrap;
+            /* supaya tidak wrap */
+            width: max-content !important;
+        }
+
+        .table-approval th,
+        .table-approval td {
+            border: none;
+            padding: 5px;
+        }
+
+        .dataTable {
+            width: 100% !important;
+        }
+
+        .custom-gambar-detail {
+            width: 49%;
+        }
+
+        @media (max-width: 1670px) {
+            .btn {
+                margin-bottom: 5px;
+            }
+        }
+
+        .bi-list,
+        .bi-arrows-fullscreen,
+        .bi-fullscreen-exit {
+            color: #fff !important;
+        }
+
+        .custom-footer {
+            background-color: white;
+        }
+    </style>
+
+    <style>
+        /* Responsive */
+        @media (max-width: 1670px) {
+            .btn{
+            margin-bottom: 5px;
+            }
+        }
+        @media (max-width: 1440px) {
+
+            /* Formulir BA 
+            ========================================================
+            */
+            .custom-input-tanggal {
+                width: max-content;
+            }
+
+            .custom-font-form {
+                font-size: 12px;
+            }
+
+            .custom-form-sn .input-group .input-group-text {
+                padding-right: 60px !important;
+            }
+
+            .custom-form-merk .input-group .input-group-text {
+                padding-right: 42px !important;
+            }
+
+            .custom-form-type .input-group .input-group-text {
+                padding-right: 22px !important;
+            }
+
+            .custom-form-lantai,
+            .custom-form-lokasi {
+                width: max-content;
+            }
+
+            .custom-row-rm-kat {
+                margin-top: 0 !important;
+            }
+
+            .custom-form-jk,
+            .custom-form-pk,
+            .custom-form-rm {
+                width: 100%;
+                padding-right: 0 !important;
+                margin-top: 0 !important;
+                margin-bottom: 16px;
+            }
+
+            .custom-form-jk .input-group .input-group-text {
+                padding-right: 37px !important;
+            }
+
+            .custom-form-rm .input-group .input-group-text {
+                padding-right: 27px !important;
+            }
+
+
+            /* .custom-form-nomor{
+
+            } */
+
+            /* End:Formulir BA 
+            ========================================================
+            */
+        }
+
+        @media (min-width: 1025px) {
+            .custom-main {
+                height: calc(100vh - 130px);
+            }
+        }
+
+        @media (max-width: 1024px) {
+            #res-fullscreen {
+                display: none;
+            }
+
+            .custom-footer {
+                position: absolute !important;
+                bottom: 0;
+                width: 100vw;
+            }
+
+            .custom-main {
+                padding-bottom: 100px;
+                height: max-content;
+                padding-top: 10px;
+            }
+
+            /* .dt-orderable-none{
+            min-width: 100px;
+            } */
+            /* Form input */
+            .custom-input-form {
+                width: 100%;
+            }
+
+            /* .custom-row-search-db{
+            width: 160px;
+            }
+            .custom-row-search-db .col-4{
+                width: 100%;
+            } */
+            .custom-input-tanggal {
+                width: 235px !important;
+            }
+
+            /* .custom-input-tanggal .input-group{
+            width: 100% !important;
+            } */
+            .custom-form-sn .input-group-text {
+                padding-right: 55px !important;
+            }
+
+            .custom-form-merk .input-group-text {
+                padding-right: 35px !important;
+            }
+
+            .custom-form-lokasi,
+            .custom-form-lantai {
+                width: 50%;
+            }
+
+            .custom-form-jk,
+            .custom-form-pk {
+                width: 100%;
+            }
+
+            .custom-form-pk {
+                margin-top: 1rem !important;
+            }
+
+            .custom-form-jk {
+                margin-top: 1rem !important;
+                padding-right: 0 !important;
+            }
+
+            /* .custom-form-jp{
+            width: 100%;
+            } */
+            .custom-form-jk .input-group-text {
+                padding-right: 40px !important;
+            }
+
+            .custom-form-rm .input-group-text {
+                padding-right: 28px !important;
+            }
+
+            /* Form input gambar*/
+            .custom-input-gambar-section {
+                width: 100%;
+            }
+
+            .custom-input-gambar {
+                width: 100%;
+                height: 35vh !important;
+            }
+
+            .custom-btn-action {
+                padding: 6px 12px !important;
+                font-size: 1rem !important;
+            }
+
+            .custom-gambar-detail {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 450px) {
+
+            #date,
+            #clock {
+                display: none;
+            }
+
+            .custom-main {
+                width: 100%;
+            }
+
+            #myTable_wrapper {
+                width: 100%;
+            }
+
+            #myTable_wrapper .row:nth-child(2) {
+                width: 100%;
+                overflow-x: auto;
+                max-height: 250px;
+            }
+
+            .custom-btn-input-history {
+                flex-direction: column !important;
+                right: 10px !important;
+                left: auto !important;
+            }
+
+            /* #tombolInputPopup, #tombolHistorikal{
+            padding: 12px 24px;
+            } */
+            #tombolInputPopup i,
+            #tombolHistorikal i {
+                font-size: 25px !important;
+            }
+
+            .custom-footer p {
+                font-size: 10px;
+            }
+
+            /* Formulir BA 
+            ========================================================
+            */
+            .custom-row-tgl-no {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .custom-input-tanggal {
+                margin-bottom: 16px;
+            }
+
+            .custom-input-tanggal,
+            .custom-form-nomor,
+            .custom-input-tanggal .input-group,
+            .custom-form-nomor .input-group {
+                width: 100% !important;
+            }
+
+            .custom-row-search-db .custom-row-search-db-child {
+                flex-direction: row !important;
+                width: 100%;
+                justify-content: space-between;
+                padding-right: 0;
+            }
+
+            /* .custom-btn-data-barang{
+            align-self: flex-end;
+            } */
+
+            .custom-font-form {
+                font-size: 12px;
+            }
+
+            .custom-form-sn,
+            .custom-form-merk,
+            .custom-form-type,
+            .custom-form-jp,
+            .custom-form-nopo,
+            .custom-form-tp {
+                margin-top: 16px;
+                width: 100%;
+            }
+
+            .custom-form-sn .input-group,
+            .custom-form-merk .input-group,
+            .custom-form-type .input-group,
+            .custom-form-jp .input-group,
+            .custom-form-nopo .input-group,
+            .custom-form-tp .input-group {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: flex-start;
+            }
+
+            .custom-form-sn .input-group .input-group-text,
+            .custom-form-merk .input-group .input-group-text,
+            .custom-form-type .input-group .input-group-text,
+            .custom-form-jp .input-group .input-group-text,
+            .custom-form-nopo .input-group .input-group-text,
+            .custom-form-tp .input-group .input-group-text {
+                padding-right: 0px !important;
+                width: 100%;
+                border-radius: 5px 5px 0 0 !important;
+                border-bottom: none;
+                margin: 0 !important;
+            }
+
+            .custom-form-sn .input-group .form-control,
+            .custom-form-merk .input-group .form-control,
+            .custom-form-type .input-group .form-control,
+            .custom-form-jp .input-group .form-control,
+            .custom-form-nopo .input-group .form-control,
+            .custom-form-tp .input-group .form-control {
+                width: 100%;
+                border-radius: 0 0 0 0;
+                margin: 0 !important;
+                border-radius: 0 0 5px 5px !important;
+            }
+
+            .custom-row-lokasi-lantai {
+                padding-right: 0;
+            }
+
+            .custom-form-lantai,
+            .custom-form-lokasi {
+                width: 100%;
+                margin-top: 16px;
+            }
+
+            .custom-form-lokasi .input-group,
+            .custom-form-lantai .input-group,
+            .custom-form-pengguna2 .input-group,
+            .custom-form-atasan .input-group {
+                display: flex !important;
+                flex-direction: column !important;
+                align-items: flex-start;
+            }
+
+            .custom-form-lokasi .input-group .input-group-text,
+            .custom-form-lantai .input-group .input-group-text,
+            .custom-form-pengguna2 .input-group .input-group-text,
+            .custom-form-atasan .input-group .input-group-text {
+                padding-right: 0px !important;
+                width: 100%;
+                border-radius: 5px 5px 0 0 !important;
+                border-bottom: none;
+                margin: 0 !important;
+            }
+
+            .custom-form-lokasi .input-group .form-select,
+            .custom-form-lantai .input-group .form-select,
+            .custom-form-pengguna2 .input-group .form-select,
+            .custom-form-atasan .input-group .form-select {
+                width: 100%;
+                border-radius: 0 0 0 0;
+                margin: 0 !important;
+                border-radius: 0 0 5px 5px !important;
+            }
+
+            .custom-row-pengguna-atasan {
+                margin-top: 0 !important;
+            }
+
+            .custom-form-pengguna2,
+            .custom-form-atasan {
+                margin-top: 16px;
+                width: 100%;
+            }
+
+            .custom-form-atasan .input-group {
+                padding-right: 12px;
+            }
+
+            .text-data-pengguna {
+                margin-bottom: 0;
+            }
+
+            .footer-form {
+                flex-direction: column;
+            }
+
+            .text-formulir {
+                font-size: 16px;
+            }
+
+            .custom-form-submit {
+                width: 100% !important;
+            }
+
+            .custom-row-rm-kat {
+                margin-top: 0 !important;
+            }
+
+            .custom-form-jk,
+            .custom-form-pk,
+            .custom-form-rm,
+            .custom-form-ae {
+                width: 100%;
+                padding-right: 0 !important;
+                margin-top: 0 !important;
+                margin-bottom: 16px;
+            }
+
+            .custom-form-jk .input-group .input-group-text,
+            .custom-form-pk .input-group .input-group-text,
+            .custom-form-rm .input-group .input-group-text,
+            .custom-form-ae .input-group .input-group-text {
+                padding-right: 0px !important;
+                padding-left: 0px !important;
+                width: 75px !important;
+                white-space: normal !important;
+            }
+
+            .custom-form-kk {
+                width: 100%;
+                padding-right: 0;
+            }
+
+            /* .custom-form-nomor{
+
+            } */
+
+            /* End:Formulir BA 
+            ========================================================
+            */
+            /* Detail Popup
+            */
+                /* #popupDetailBody{
+                
+            } */
+
+            .custom-detail-container {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .custom-detail-approval {
+                width: 100%;
+                overflow-x: auto;
+            }
+
+            .custom-detail-table {
+                overflow-y: auto !important;
+                width: 100% !important;
+            }
+
+            .custom-detail-table-child {
+                width: 100% !important;
+                overflow-y: auto;
+            }
+
+            .custom-detail-barang {
+                width: 100% !important;
+            }
+
+            .custom-detail-histori {
+                width: 100% !important;
+            }
+
+            .custom-popup-box-delete {
+                width: 100vw !important;
+            }
+        }
+    </style>
+
+    <style>/*animista.net*/ 
+        .scale-in-center {
+        animation: scale-in-center .3s cubic-bezier(0.250, 0.460, 0.450, 0.940) both;
+        }
+        @keyframes scale-in-center {
+        0% {
+            transform: scale(0);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        }
+        .fade-in {
+        animation: fade-in .3s cubic-bezier(0.390, 0.575, 0.565, 1.000) both;
+        }
+        @keyframes fade-in {
+        0% {
+            opacity: 0;
+        }
+        100% {
+            opacity: 1;
+        }
+        }
+        .scale-out-center {
+        animation: scale-out-center .3s cubic-bezier(0.550, 0.085, 0.680, 0.530) both;
+        }
+        @keyframes scale-out-center {
+        0% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        100% {
+            transform: scale(0);
+            opacity: 1;
+        }
+        }
+        .fade-out {
+        animation: fade-out .3s ease-out both;
+        }
+        @keyframes fade-out {
+        0% {
+            opacity: 1;
+        }
+        100% {
+            opacity: 0;
+        }
+        }
+    </style>
+
+    <style> /* scroll styling */
+        .scroll-container {
+        height: 100vh;          /* tinggi penuh layar */
+        overflow-y: scroll;     /* scroll tetap aktif */
+        -ms-overflow-style: none;  /* IE dan Edge */
+        scrollbar-width: none;     /* Firefox */
+        }
+
+        .scroll-container::-webkit-scrollbar {
+        display: none;            /* Chrome, Safari, Opera */
+        }
+    </style>
+
+    <style>/* Pagination Styling */
+        .pagination-container{
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .pagination-container select {
+        padding: 4px 8px;
+        border-radius: 5px;
+        border: none
+        }
+
+        .pagination-links a {
+            text-decoration: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            color: #333;
+        }
+
+
+        .pagination-links span {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 5px 10px;
+            color: #aaa;
+        }
+    </style>
+
+    <style>
+        /* Placeholder Skeleton */
+        .skeleton {
+            height: 16px;
+            width: 100%;
+            background: linear-gradient(90deg,
+                    #e0e0e0 25%,
+                    #f5f5f5 37%,
+                    #e0e0e0 63%);
+            background-size: 400% 100%;
+            animation: skeleton-loading 1.4s ease infinite;
+            border-radius: 4px;
+        }
+
+        .skeleton-header {
+            height: 20px;
+        }
+
+        @keyframes skeleton-loading {
+            0% {
+                background-position: 100% 0;
+            }
+
+            100% {
+                background-position: -100% 0;
+            }
+        }
+    </style>
+
+</head>
+<body  class="layout-fixed sidebar-expand-lg bg-body-tertiary overflow-x-hidden">
+
+    <script src="../assets/js/jquery-3.7.1.min.js"></script>
+    <script src="../assets/js/datatables.min.js"></script>
+
+    <div class="app-wrapper">
+
+    <nav class="app-header navbar navbar-expand bg-body sticky-top" style="z-index: 10;"> <!-- Header -->
+        <!--begin::Container-->
+        <div class="container-fluid">
+        <!--begin::Start Navbar Links-->
+        <ul class="navbar-nav">
+            <li class="nav-item">
+            <a class="nav-link" data-lte-toggle="sidebar" href="#" role="button">
+                <i class="bi bi-list"></i>
+            </a>
+            </li>
+        </ul>
+        <!--end::Start Navbar Links-->
+        <!--begin::End Navbar Links-->
+        <ul class="navbar-nav ms-auto">
+            <!--begin::Fullscreen Toggle-->
+            <li class="nav-item">
+            <a id="res-fullscreen" class="nav-link" href="#" data-lte-toggle="fullscreen">
+                <i data-lte-icon="maximize" class="bi bi-arrows-fullscreen"></i>
+                <i data-lte-icon="minimize" class="bi bi-fullscreen-exit" style="display: none"></i>
+            </a>
+            </li>
+            <!--end::Fullscreen Toggle-->
+            <!--begin::Clock-->
+            <li class="nav-item pt-2">
+                <span id="date" class="text-white fw-bold" style="min-width: 120px; text-align: right;"></span>
+                <span id="clock" class="text-white fw-bold" style="min-width: 75px; text-align: right;"></span>
+            </li>
+            <!--end::Clock-->
+
+            <li class="personalia-menu nav-item me-3 rounded">
+                <i id="personaliaBtn" class="bi bi-brush-fill btn fw-bold text-white" style="box-shadow:none;"></i>
+            </li>
+
+            <div class="ms-auto me-2 position-relative">
+            <i id="tombolAkun" class="bi bi-person-circle btn fw-bold text-white border border-white"></i>
+            <div id="akunInfo" class="akun-info card position-absolute bg-white p-2 display-state" style="width:300px;height:160px;top:50px;right:0;transition:all .2s ease-in-out">
+                <div class=" d-flex p-3 align-items-center justify-content-around border-bottom">
+                <i class="bi bi-person-circle text-primary" style="font-size:44px"></i>
+                <div class="">
+                    <h6><?= htmlspecialchars($_SESSION['nama']) ?></h6>
+                    <h6 class="" style="color:gray"><?= htmlspecialchars($_SESSION['hak_akses']) ?></h6>
+                </div>
+                </div>
+                    <a href="../logout.php" class="btn btn-outline-danger fw-bold d-flex ps-3 gap-2 mt-2" onclick="return confirm('Yakin ingin logout?')" title="Logout">
+                    <i class="bi bi-box-arrow-right fw-bolder"></i><p class="m-0">Logout</p>
+                </a>
+            </div>
+            </div>
+        </ul>
+        <!--end::End Navbar Links-->
+        </div>
+        <!--end::Container-->
+    </nav>
+
+    <aside class="app-sidebar shadow" style="z-index: 10;" data-bs-theme="dark"> <!-- Sidebar -->
+        <div class="sidebar-brand" style="border:none;">
+        <a href="../index.php" class="brand-link">
+            <img
+            src="../assets/img/logo.png"
+            alt="MSAL Logo"
+            class="brand-image opacity-75 shadow"
+            />
+            <span class="brand-text fw-bold">SIBARA</span>
+        </a>
+        </div>
+        <div class="sidebar-wrapper">
+        <nav class="mt-2">
+            
+            <ul
+            class="nav sidebar-menu flex-column"
+            data-lte-toggle="treeview"
+            role="menu"
+            data-accordion="false"
+            >
+            <li class="nav-item">
+                <a href="../index.php" class="nav-link">
+                <i class="bi bi-house-fill"></i>
+                <p>
+                    Dashboard
+                </p>
+                </a>
+            </li>
+            <li class="nav-header">
+                LIST BERITA ACARA
+            </li>
+            <!-- List BA Kerusakan -->
+            <li class="nav-item">
+                <a href="../ba_kerusakan-fix/ba_kerusakan.php" class="nav-link">
+                <i class="nav-icon bi bi-newspaper"></i>
+                <p>
+                    BA Kerusakan
+                </p>
+                </a>
+            </li>
+            <!-- List BA Pengembalian -->
+            <!-- <li class="nav-item">
+                <a href="../ba_pengembalian/ba_pengembalian.php" class="nav-link">
+                <i class="nav-icon bi bi-newspaper"></i>
+                <p>
+                    BA Pengembalian
+                </p>
+                </a>
+            </li> -->
+            <!-- List BA Serah Terima -->
+            <!-- <li class="nav-item menu-open">
+                <a href="#" class="nav-link">
+                <i class="nav-icon bi bi-newspaper"></i>
+                <p>
+                    BA Serah Terima
+                    <i class="nav-arrow bi bi-chevron-right"></i>
+                </p>
+                </a>
+                <ul class="nav nav-treeview">
+                    <li class="nav-item">
+                        <a href="#" class="nav-link text-white" aria-disabled="true">
+                        <i class="bi bi-newspaper"></i>
+                        <p class="text-white">
+                            Inventaris
+                        </p>
+                        </a>
+                    </li>
+                </ul>
+            </li> -->
+            <li class="nav-item">
+                <a href="../ba_pemutihan/ba_pemutihan.php" class="nav-link" aria-disabled="true">
+                    <i class="nav-icon bi bi-newspaper"></i>
+                    <p>BA Pemutihan</p>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a href="../ba_pengembalian/ba_pengembalian.php" class="nav-link" aria-disabled="true">
+                    <i class="nav-icon bi bi-newspaper"></i>
+                    <p>BA Pengembalian</p>
+                </a>
+            </li>
+            
+            <?php if ($ptSekarang == "PT.MSAL (HO)"){ ?>
+            <!-- List BA Serah Terima -->
+            <li class="nav-item">
+                <a href="#" class="nav-link text-white" aria-disabled="true">
+                <i class="nav-icon bi bi-newspaper"></i>
+                <p class="text-white">
+                    BA Serah Terima Asset Inventaris
+                </p>
+                </a>
+            </li>
+            <?php } ?>
+            <li class="nav-item">
+                <a href="../ba_mutasi/ba_mutasi.php" class="nav-link">
+                <i class="nav-icon bi bi-newspaper"></i>
+                <p>
+                    BA Mutasi
+                </p>
+                </a>
+            </li>
+            <!-- <li class="nav-item">
+                <a href="../ba_mutasi/ba_mutasi.php" class="nav-link">
+                <i class="nav-icon bi bi-newspaper"></i>
+                <p>
+                    BA Mutasi
+                </p>
+                </a>
+            </li> -->
+            <li class="nav-header">
+                USER
+            </li>
+            <!-- <?php if ($_SESSION['hak_akses'] === 'Admin'): ?>
+            <li class="nav-item">
+                <a href="../personal/status.php" class="nav-link">
+                <i class="nav-icon bi bi-clipboard2-fill"></i>
+                <p>
+                    Status Approval BA
+                </p>
+                </a>
+            </li>
+            <?php endif; ?> -->
+            <li class="nav-item">
+                <a href="../personal/approval.php" class="nav-link">
+                <i class="nav-icon bi bi-clipboard2-check"></i>
+                <p>
+                    Approve BA
+                </p>
+                <?php if ($jumlah_approval_notif > 0): ?>
+                <span class="position-absolute translate-middle badge rounded-pill bg-danger" style="right: 0;top:20px">
+                <?= $jumlah_approval_notif ?>
+                </span>
+                <?php endif; ?>
+                </a>
+            </li>
+            <!-- <li class="nav-item">
+                <a href="../personal/riwayat.php" class="nav-link">
+                <i class="nav-icon bi bi-clipboard2-data"></i>
+                <p>
+                    Riwayat Approval
+                </p>
+                </a>
+            </li> -->
+            <?php if ($showDataAkunMenu): ?>
+            <li class="nav-header">
+                MASTER
+            </li>
+            <li class="nav-item">
+                <a href="../master/data_akun/tabel.php" class="nav-link">
+                <i class="nav-icon bi bi-person-circle"></i>
+                <p>
+                    Data Akun
+                </p>
+                </a>
+            </li>
+            <?php endif; ?>
+            
+            </ul>
+
+            
+
+        </nav>
+        </div>
+    </aside>
+
+    
+
+    <?php //Koneksi database
+    include '../koneksi.php';
+
+    // Ambil nilai filter dari parameter GET
+    // $filter_pt = $_GET['pt'] ?? '';
+    // $filter_tahun = $_GET['tahun'] ?? '';
+    // $filter_bulan = $_GET['bulan'] ?? '';
+
+    $filter_pt = isset($_GET['pt']) ? $_GET['pt'] : '';
+    $filter_tahun = isset($_GET['tahun']) ? $_GET['tahun'] : '';
+    $filter_bulan = isset($_GET['bulan']) ? $_GET['bulan'] : '';
+
+    $where_clauses = [];
+    $params = [];
+    $types = '';
+
+    // Filter PT
+    if ($filter_pt !== '' && $filter_pt !== 'all') {
+        $where_clauses[] = "pt = ?";
+        $params[] = $filter_pt;
+        $types .= 's';
+    }
+
+    // Filter Tahun
+    if ($filter_tahun !== '' && $filter_tahun !== 'all') {
+        $where_clauses[] = "YEAR(tanggal) = ?";
+        $params[] = (int)$filter_tahun;
+        $types .= 'i';
+    }
+
+    // Filter Bulan
+    if ($filter_bulan !== '' && $filter_bulan !== 'all') {
+        $where_clauses[] = "MONTH(tanggal) = ?";
+        $params[] = (int)$filter_bulan;
+        $types .= 'i';
+    }
+
+    // Hanya tampilkan data yang belum dihapus
+    $where_clauses[] = "dihapus = 0";
+
+    // Gabungkan WHERE
+    $where_sql = '';
+    if (!empty($where_clauses)) {
+        $where_sql = 'WHERE ' . implode(' AND ', $where_clauses);
+    }
+
+    // Query
+    $query = "
+        SELECT *
+        FROM ba_serah_terima_asset
+        $where_sql
+        ORDER BY tanggal DESC, nomor_ba DESC
+    ";
+
+    // Prepare
+    $stmt = $koneksi->prepare($query);
+    if (!$stmt) {
+        die('Prepare gagal: ' . $koneksi->error);
+    }
+
+    // Bind jika ada parameter
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
+
+    // Execute
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $no = 1;
+    ?>
+
+    <main class="custom-main app-main"><!-- Main Content -->
+    
+    <!--Status Sukses Pop Up-->
+        <?php if (isset($_SESSION['message'])): ?>
+            <?php if (isset($_GET['status']) && $_GET['status'] == 'sukses'): ?>
+                <div class="w-100 d-flex justify-content-center position-absolute" style="height: max-content;">
+                    <div class="d-flex p-0 alert alert-success border-0 text-center fw-bold mb-0 position-absolute fade-in infoin-approval" style="z-index:8;transition: opacity 0.5s ease;right:20px;width:max-content;height:max-content;">
+                        <div class="d-flex justify-content-center align-items-center bg-success pe-2 ps-2 rounded-start text-white fw-bolder">
+                            <i class="bi bi-check-lg"></i>
+                        </div>
+                        <p class="p-2 m-0" style="font-weight: 500;"><?= htmlspecialchars($_SESSION['message']); unset($_SESSION['message']); ?></p>
+                    </div>
+                </div>
+            <?php elseif (isset($_GET['status']) && $_GET['status'] == 'gagal'): ?>
+                <div class="w-100 d-flex justify-content-center position-absolute" style="height: max-content;">
+                    <div class="d-flex p-0 alert alert-danger border-0 text-center fw-bold mb-0 position-absolute fade-in infoin-approval" style="z-index:8;transition: opacity 0.5s ease;right:20px;width:max-content;height:max-content;">
+                        <div class="d-flex justify-content-center align-items-center bg-danger pe-2 ps-2 rounded-start text-white fw-bolder">
+                            <i class="bi bi-x-lg"></i>
+                        </div>
+                        <p class="p-2 m-0" style="font-weight: 500;"><?= htmlspecialchars($_SESSION['message']); unset($_SESSION['message']); ?></p>
+                    </div>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+
+    <section class="table-wrapper bg-white position-relative overflow-visible d-flex flex-column">
+        <h2>Daftar Serah Terima Penggunaan Asset Inventaris</h2>
+
+        <form method="GET" class="mb-3 d-flex flex-wrap gap-3">
+            <select name="pt" class="form-select" onchange="this.form.submit()" style="width: 200px;">
+                <option value="all">Semua PT</option>
+                <option value="PT.MSAL (HO)" <?= $filter_pt === 'PT.MSAL (HO)' ? 'selected' : '' ?>>PT.MSAL (HO)</option>
+                <!-- <option value="PT.MSAL (SITE)" <?= $filter_pt === 'PT.MSAL (SITE)' ? 'selected' : '' ?>>PT.MSAL (SITE)</option> -->
+            </select>
+            
+            <select name="tahun" class="form-select" onchange="this.form.submit()" style="width: 200px;">
+                <option value="all">Semua Tahun</option>
+                <?php
+                $current_year = date('Y');
+
+                $data_year = 2020;
+                $query_year = "
+                    SELECT MIN(YEAR(tanggal)) AS tahun_terlama
+                    FROM ba_serah_terima_asset
+                ";
+
+                $stmt_year = $koneksi->prepare($query_year);
+                $stmt_year->execute();
+                $result_year = $stmt_year->get_result();
+
+                if ($row = $result_year->fetch_assoc()) {
+                    if (!empty($row['tahun_terlama'])) {
+                        $data_year = (int)$row['tahun_terlama'];
+                    }
+                }
+
+                for ($y = $current_year; $y >= $data_year; $y--) {
+                    $selected = ($filter_tahun == $y) ? 'selected' : '';
+                    echo "<option value='$y' $selected>$y</option>";
+                }
+                ?>
+            </select>
+
+            <select name="bulan" class="form-select" onchange="this.form.submit()" style="width: 200px;">
+                <option value="all" <?= $filter_bulan === 'all' ? 'selected' : '' ?>>Semua Bulan</option>
+                <?php
+                $bulanIndo = [
+                    1 => 'Januari', 2 => 'Februari', 3 => 'Maret',
+                    4 => 'April', 5 => 'Mei', 6 => 'Juni',
+                    7 => 'Juli', 8 => 'Agustus', 9 => 'September',
+                    10 => 'Oktober', 11 => 'November', 12 => 'Desember'
+                ];
+
+                for ($i = 1; $i <= 12; $i++) {
+                    $selected = ($filter_bulan == $i) ? 'selected' : '';
+                    echo "<option value='$i' $selected>{$bulanIndo[$i]}</option>";
+                }
+                ?>
+            </select>
+
+            
+
+        </form>
+        
+        <div id="tableSkeleton">
+
+            <table class="table table-borderless">
+                <thead>
+                    <tr>
+                        <th>
+                            <div class="skeleton skeleton-header"></div>
+                        </th>
+                        <th>
+                            <div class="skeleton skeleton-header d-none"></div>
+                        </th>
+                        <th>
+                            <div class="skeleton skeleton-header d-none"></div>
+                        </th>
+                        <th>
+                            <div class="skeleton skeleton-header d-none"></div>
+                        </th>
+                        <th>
+                            <div class="skeleton skeleton-header"></div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php for ($i = 0; $i < 8; $i++) { ?>
+                        <tr>
+                            <td style="border: #e0e0e0 1px solid;">
+                                <div class="skeleton"></div>
+                            </td>
+                            <td style="border: #e0e0e0 1px solid;">
+                                <div class="skeleton"></div>
+                            </td>
+                            <td style="border: #e0e0e0 1px solid;">
+                                <div class="skeleton"></div>
+                            </td>
+                            <td style="border: #e0e0e0 1px solid;">
+                                <div class="skeleton"></div>
+                            </td>
+                            <td style="border: #e0e0e0 1px solid;">
+                                <div class="skeleton"></div>
+                            </td>
+                        </tr>
+                    <?php } ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="tabelUtama" style="display: none;">
+            <table id="myTable" class="table table-bordered table-striped text-center mt-2">
+                <!-- <a href="form_input.php" class="custom-input-btn btn btn-success position-absolute" style="width:max-content;height:max-content;top:127px;left:220px;z-index:1;"><i class="bi bi-plus-lg"></i></a> -->
+                <div class="custom-btn-input-history position-absolute d-flex gap-2" style="top:127px;left:220px;z-index:1;width:max-content;height:max-content;">
+                    <a href="#" id="tombolInputPopup" class="<?php if ($_SESSION['hak_akses'] === 'Super Admin'): ?>d-none<?php endif; ?>
+                            btn btn-success"><i class="bi bi-plus-lg"></i></a>
+                    <a href="../master/histori_edit.php" id="tombolHistorikal" class="btn btn-warning"><i class="bi bi-clock-history"></i></a>
+                </div>
+                <thead>
+                    <tr>
+                        <th>No</th>
+                        <th>Tanggal</th>
+                        <th>Nomor BA</th>
+                        <th>Nama Peminjam</th>
+                        <th>Serial Number</th>
+                        <th>Merek</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php while ($row = $result->fetch_assoc()): ?>
+                    <tr>
+                        <td><?= $no++ ?></td>
+                        <td><?= htmlspecialchars($row['tanggal']) ?></td>
+                        <td><?= htmlspecialchars($row['nomor_ba']) ?></td>
+                        <td><?= htmlspecialchars($row['peminjam']) ?></td>
+                        <td><?= htmlspecialchars($row['sn']) ?></td>
+                        <td><?= htmlspecialchars(isset($row['merek']) ? $row['merek'] : '-') ?></td>
+                        <td>
+                            
+                            <a class="custom-btn-action btn btn-secondary btn-sm btn-detail-ba" href="#" data-id="<?= $row['id'] ?>">
+                                <i class="bi bi-eye-fill"></i>
+                            </a>
+                            
+                            <a class='custom-btn-action btn btn-primary btn-sm' href='surat_output.php?id=<?= $row['id'] ?>' target='_blank'><i class="bi bi-file-earmark-text-fill"></i></a>
+                            <?php if ($_SESSION['nama'] === $row['nama_pembuat']): ?>
+                                
+                            <?php if($row['pending_hapus'] != 1){ ?>
+                                <a class='custom-btn-action btn btn-warning btn-sm tombolPopupEdit' href='#' data-id="<?= $row['id'] ?>">
+                                    <i class="bi bi-feather"></i>
+                                </a>
+                                <?php
+                                
+                                $approvalPending = false;
+                                $approvalFields = array(
+                                    isset($row['approval_1']) ? $row['approval_1'] : 0,
+                                    isset($row['approval_2']) ? $row['approval_2'] : 0,
+                                    isset($row['approval_3']) ? $row['approval_3'] : 0,
+                                    isset($row['approval_4']) ? $row['approval_4'] : 0
+                                );
+
+
+                                foreach ($approvalFields as $approval) {
+                                    if ((int)$approval === 1) {
+                                        $approvalPending = true;
+                                        break;
+                                    }
+                                }
+                                ?>
+                                <a class='custom-btn-action btn btn-danger btn-sm tombolPopupDelete' href='#' data-id="<?= $row['id'] ?> " data-pending="<?= $approvalPending ? 'true' : 'false' ?>"><i class="bi bi-trash-fill"></i></a>
+                                
+                            <?php }
+                            endif; ?>
+                            <?php if($row['pending_hapus'] === 1 && $_SESSION['nama'] === $row['nama_pembuat']){ ?>
+                                <br>
+                                <p class="custom-font-form m-0 mb-1 text-warning"><i class="bi bi-exclamation-triangle"></i> Surat sedang pending delete.</p>
+                            <?php } ?>
+                        </td>
+                    </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
+                <div id="popupBoxDelete" class="custom-popup-box-delete popup-box position-absolute bg-white rounded-1 flex-column justify-content-start align-items-center p-2"
+                    style="top:30vh; height: max-content;align-self: center;z-index: 9;width: 500px;">
+
+                    <div class="w-100 d-flex justify-content-between mb-2" style="height: max-content;">
+                        <h4 class="m-0 p-0"></h4>
+                    </div>
+
+                    <!-- FORM (POST) -->
+                    <form id="formDelete" method="POST" action="delete.php" class="d-flex flex-column align-items-center w-100">
+
+                        <input type="hidden" name="id" id="deleteId">
+                        <input type="hidden" name="pending" id="deletePending">
+
+                        <p>Apakah anda yakin ingin menghapus data ini?</p>
+
+                        <!-- ALASAN HAPUS (DEFAULT: HIDDEN) -->
+                        <div id="alasanWrapper" class="w-100 d-none">
+                            <div class="input-group">
+                                <span class="input-group-text">Alasan Hapus</span>
+                                <textarea
+                                    name="alasan_hapus"
+                                    id="alasanHapus"
+                                    class="form-control"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- TOMBOL ASLI (TIDAK DIUBAH) -->
+                        <div class="w-50 d-flex justify-content-around mt-2">
+                            <button id="tombolAccDelete" type="submit" class="btn btn-danger">Hapus</button>
+                            <a id="tombolClosePopupDelete" class="custom-btn-action btn btn-secondary" href="#">Batal</a>
+                        </div>
+
+                    </form>
+                </div>
+
+                <div id="popupBoxInput" class="popup-box position-absolute bg-white top-0 rounded-1 flex-column justify-content-start align-items-center p-2" style="height: max-content;align-self: center;z-index: 9;width: 95%;">
+
+                    <div class="w-100 d-flex justify-content-between mb-2" style="height: max-content;">
+                        <h4 class="m-0 p-0">Input Berita Acara</h4>
+                        <a id="tombolClosePopup" class='custom-btn-action btn btn-danger btn-sm' href='#'><i class="bi bi-x-lg"></i></a>
+                    </div>
+
+                    <form class="popupInput d-flex flex-column" method="post" action="proses_simpan.php" enctype="multipart/form-data">
+                        <div class="form-section">
+                            <div class="row position-relative">
+
+                                <div class="custom-input-form col-8">
+                                    <h4>Data BA Serah Terima Penggunaan Asset Inventaris</h4>
+                                    <div class="custom-row-tgl-no row">
+                                        <div class="custom-input-tanggal col-3">
+                                            <div class="input-group" style="width:220px;">
+                                                <span class="input-group-text custom-font-form">Tanggal</span>
+                                                <input class="form-control custom-font-form" type="date" name="tanggal" id="tanggal" max="<?= date('Y-m-d') ?>" value="<?= date('Y-m-d') ?>" required>
+                                            </div>
+                                        </div>
+                                        <div class="custom-form-nomor col-4">
+                                            <div class="input-group" style="width:180px;">
+                                                <span class="input-group-text custom-font-form">Nomor BA</span>
+                                                <input type="text" class="form-control custom-font-form" name="nomor_ba" id="nomor_ba" value="<?= $nomor_ba_baru ?>" readonly>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row mt-3 border border-1 p-1 rounded-2 me-1">
+                                        <div class="custom-row-search-db row pt-1 pb-2">
+                                            <div class="col-4 d-flex flex-column custom-row-search-db-child">
+                                                <h5>Data barang</h5>
+                                                <div class="custom-btn-data-barang d-flex">
+                                                    <div class="tombolDataBarangPopup btn btn-primary rounded-end-0 btn-lg" data-target="input"><i class="bi bi-search"></i></div>
+                                                    <!-- <div class="btn btn-primary rounded-start-0" id="openScanModal"><i class="bi bi-qr-code-scan"></i></div> -->
+                                                    <button type="button" id="openScanModal" class="btn btn-primary rounded-start-0 btn-lg">
+                                                        <i class="bi bi-qr-code-scan"></i>
+                                                    </button>
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                        <div class="row pe-0 w-100">
+
+                                            <div class="custom-form-sn col-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text custom-font-form" style="padding-right:63px;">SN</span>
+                                                    <input id="serial_number_input" class="form-control custom-font-form" type="text" name="sn" value="" readonly>
+                                                </div>
+                                            </div>
+                                            <div class="custom-form-nopo col-6">
+                                                <div class="input-group">
+                                                    <span class="input-group-text custom-font-form" style="padding-right:52px;">Nomor PO</span>
+                                                    <input id="nomor_po_input" class="form-control custom-font-form" type="text" name="nomor_po" value="" readonly>
+                                                </div>
+                                            </div>
+
+                                            <div class="custom-form-merk col-6 mt-3">
+                                                <div class="input-group">
+                                                    <span class="input-group-text custom-font-form" style="padding-right:37px;">Merek</span>
+                                                    <input id="merek_input" class="form-control custom-font-form" type="text" name="merek" value="" readonly>
+                                                </div>
+                                            </div>
+                                            <div class="custom-form-type col-6 mt-3">
+                                                <div class="input-group ">
+                                                    <span class="input-group-text custom-font-form">Tipe Perangkat</span>
+                                                    <input id="type_input" type="text" class="form-control custom-font-form" name="type" value="" readonly>
+                                                </div>
+                                            </div>
+
+                                            <div class="custom-form-jp col-6 mt-3">
+                                                <div class="input-group">
+                                                    <span class="input-group-text custom-font-form" style="padding-right:18px;">Jenis Perangkat</span>
+                                                    <input id="jenis_perangkat_input" class="form-control custom-font-form" type="text" name="jenis_perangkat" value="" readonly>
+                                                </div>
+                                            </div>
+                                            <div class="custom-form-tp col-6 mt-3">
+                                                <div class="input-group">
+                                                    <span class="input-group-text custom-font-form" style="padding-right:12px;">Tanggal Pembelian</span>
+                                                    <input id="tanggal_pembelian_input" type="text" class="form-control custom-font-form" name="tanggal_pembelian" value="" readonly>
+                                                </div>
+                                            </div>
+                                            <div class="custom-form-tp col-6 mt-3 d-none">
+                                                
+                                                <input id="kode_input" type="text" class="form-control custom-font-form" name="kode" value="" readonly>
+                                                <input id="satuan_input" type="text" class="form-control custom-font-form" name="satuan" value="" readonly>
+                                                <input id="cpu_input" type="text" class="form-control custom-font-form" name="cpu" value="" readonly>
+                                                <input id="os_input" type="text" class="form-control custom-font-form" name="os" value="" readonly>
+                                                <input id="ram_input" type="text" class="form-control custom-font-form" name="ram" value="" readonly>
+                                                <input id="storage_input" type="text" class="form-control custom-font-form" name="storage" value="" readonly>
+                                                <input id="gpu_input" type="text" class="form-control custom-font-form" name="gpu" value="" readonly>
+                                                <input id="displays_input" type="text" class="form-control custom-font-form" name="display" value="" readonly>
+                                                <input id="lain_input" type="text" class="form-control custom-font-form" name="lain" value="" readonly>
+                                                <input id="merkmonitor_input" type="text" class="form-control custom-font-form" name="merkmonitor" value="" readonly>
+                                                <input id="snmonitor_input" type="text" class="form-control custom-font-form" name="snmonitor" value="" readonly>
+                                                <input id="merkkeyboard_input" type="text" class="form-control custom-font-form" name="merkkeyboard" value="" readonly>
+                                                <input id="snkeyboard_input" type="text" class="form-control custom-font-form" name="snkeyboard" value="" readonly>
+                                                <input id="merkmouse_input" type="text" class="form-control custom-font-form" name="merkmouse" value="" readonly>
+                                                <input id="snmouse_input" type="text" class="form-control custom-font-form" name="snmouse" value="" readonly>
+                                                <input id="qtyid_input" type="text" class="form-control custom-font-form" name="qtyid" value="" readonly>
+                                                <input id="user_input" type="text" class="form-control custom-font-form" name="user" value="" readonly>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="row mt-3 border border-1 p-1 rounded-2 me-1">
+                                        <div class="row">
+                                            <h5 class="text-data-pengguna">Data Peminjam</h5>
+                                        </div>
+
+                                        <div class="custom-row-lokasi-lantai row">
+                                            <div class="custom-form-lokasi col-4">
+                                                <div class="input-group">
+                                                    <span class="input-group-text custom-font-form">PT</span>
+                                                    <select name="pt" id="perusahaan" class="form-select custom-font-form" required>
+                                                        <option value="">-- Pilih Lokasi --</option>
+                                                        <?php
+                                                        if ($pt_session === 'PT.MSAL (HO)') {
+                                                        ?>
+                                                            <option value="PT.MSAL (HO)">PT.MSAL (HO)</option>
+                                                        <?php
+                                                        } elseif ($pt_session === 'PT.MSAL (PKS)') {
+                                                        ?>
+                                                            <option value="PT.MSAL (PKS)">PT.MSAL (PKS)</option>
+                                                        <?php
+                                                        } elseif ($pt_session === 'PT.MSAL (SITE)') {
+                                                        ?>
+                                                            <option value="PT.MSAL (SITE)">PT.MSAL (SITE)</option>
+                                                        <?php
+                                                        } elseif ($pt_session === 'PT.PSAM (PKS)') {
+                                                        ?>
+                                                            <option value="PT.PSAM (PKS)">PT.PSAM (PKS)</option>
+                                                        <?php
+                                                        } elseif ($pt_session === 'PT.PSAM (SITE)') {
+                                                        ?>
+                                                            <option value="PT.PSAM (SITE)">PT.PSAM (SITE)</option>
+                                                        <?php
+                                                        } elseif ($pt_session === 'PT.MAPA') {
+                                                        ?>
+                                                            <option value="PT.MAPA">PT.MAPA</option>
+                                                        <?php
+                                                        } elseif ($pt_session === 'PT.PEAK (PKS)') {
+                                                        ?>
+                                                            <option value="PT.PEAK (PKS)">PT.PEAK (PKS)</option>
+                                                        <?php
+                                                        } elseif ($pt_session === 'PT.PEAK (SITE)') {
+                                                        ?>
+                                                            <option value="PT.PEAK (SITE)">PT.PEAK (SITE)</option>
+                                                        <?php
+                                                        } elseif ($pt_session === 'RO PALANGKARAYA') {
+                                                        ?>
+                                                            <option value="RO PALANGKARAYA">RO PALANGKARAYA</option>
+                                                        <?php
+                                                        } elseif ($pt_session === 'RO SAMPIT') {
+                                                        ?>
+                                                            <option value="RO SAMPIT">RO SAMPIT</option>
+                                                        <?php
+                                                        } else {
+                                                        ?>
+                                                            <option value="-">-</option>
+                                                        <?php
+                                                        }
+                                                        ?>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <?php
+                                            if ($pt_session === 'PT.MSAL (HO)') {
+                                            ?>
+                                                <div class="custom-form-lantai col-3" id="lantai-wrapper" style="display: none;">
+                                                    <div class="input-group">
+                                                        <span class="input-group-text custom-font-form">Lantai</span>
+                                                        <select name="lokasi" id="lokasi" class="form-select custom-font-form ">
+                                                            <option value="">-- Pilih Lantai --</option>
+                                                            <!--Koneksi Label lantai-->
+                                                            <?php
+                                                            $resultLantai = $koneksi->query("SELECT DISTINCT lantai FROM data_karyawan ORDER BY lantai ASC");
+                                                            while ($row2 = $resultLantai->fetch_assoc()):
+                                                                $value = $row2['lantai'];
+                                                                if (preg_match('/^LT\.(\d+)/i', $value, $match)) {
+                                                                    $label = "Lantai " . $match[1];
+                                                                } else {
+                                                                    $label = $value;
+                                                                }
+                                                            ?>
+                                                                <option value="<?= htmlspecialchars($value) ?>"><?= htmlspecialchars($label) ?></option>
+                                                            <?php endwhile; ?>
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            <?php } elseif ($pt_session === 'PT.MSAL (SITE)' || $pt_session !== 'PT.MSAL (HO)') {
+                                            ?>
+                                                <div class="custom-form-lantai col-5" id="lantai-wrapper" style="display: none;">
+                                                    <div class="input-group">
+                                                        <span class="input-group-text custom-font-form">Lokasi</span>
+                                                        <input type="text" name="lokasi" class="form-control custom-font-form " placeholder="Detail Lokasi" required>
+                                                    </div>
+                                                </div>
+                                            <?php } else {
+                                            ?>
+                                                <div class="custom-form-lantai col-5" id="lantai-wrapper" style="display: none;">
+                                                    <div class="input-group">
+                                                        <span class="input-group-text custom-font-form">Lokasi</span>
+                                                        <input type="text" name="lokasi" class="form-control custom-font-form " placeholder="Detail Lokasi" required>
+                                                    </div>
+                                                </div>
+                                            <?php
+                                            }
+                                            ?>
+                                        </div>
+
+                                        <div class="custom-row-pengguna-atasan row mt-3 pe-0" id="user-wrapper" style="display: none;">
+                                            <div class="custom-form-pengguna2 col-6">
+                                                <div class="input-group">
+                                                    <?php
+                                                    if ($pt_session === 'PT.MSAL (HO)') {
+                                                    ?>
+                                                        <span class="input-group-text custom-font-form">Pengguna</span>
+                                                        <select name="peminjam" id="user" class="form-select custom-font-form" required>
+                                                            <option value="">-- Pilih Pengguna --</option>
+                                                        </select>
+                                                    <?php
+                                                    } elseif ($pt_session === 'PT.MSAL (SITE)' || $pt_session !== 'PT.MSAL (HO)') {
+                                                    ?>
+                                                        <span class="input-group-text custom-font-form">Pengguna</span>
+                                                        <input type="text" name="peminjam" class="form-control custom-font-form" placeholder="Nama Pengguna" required>
+                                                    <?php
+                                                    } else {
+                                                    ?>
+                                                        <span class="input-group-text custom-font-form">Pengguna</span>
+                                                        <input type="text" name="peminjam" class="form-control custom-font-form" placeholder="Nama Pengguna" required>
+                                                    <?php
+                                                    }
+                                                    ?>
+                                                </div>
+                                            </div>
+                                            <div class="custom-form-atasan col-6 pe-0">
+                                                <div class="input-group">
+
+                                                    <?php
+                                                    if ($pt_session === 'PT.MSAL (HO)') {
+                                                    ?>
+                                                        <span class="input-group-text custom-font-form">Atasan Pengguna</span>
+                                                        <select name="atasan_peminjam" id="atasan_peminjam" class="form-select custom-font-form" required>
+                                                            <option value="">-- Pilih Atasan Pengguna --</option>
+                                                        </select>
+                                                    <?php
+                                                    } elseif ($pt_session === 'PT.MSAL (SITE)' || $pt_session !== 'PT.MSAL (HO)') {
+                                                    ?>
+                                                        <span class="input-group-text custom-font-form">Atasan Pengguna</span>
+                                                        <input type="text" name="atasan_peminjam" class="form-control custom-font-form" placeholder="Atasan Pengguna" required>
+                                                    <?php
+                                                    } else {
+                                                    ?>
+                                                        <span class="input-group-text custom-font-form">Atasan Pengguna</span>
+                                                        <input type="text" name="atasan_peminjam" class="form-control custom-font-form" placeholder="Atasan Pengguna" required>
+                                                    <?php
+                                                    }
+                                                    ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row mt-3 pe-0" id="alamat-wrapper" style="display: none;">
+                                            <div class="custom-form-alamat col-12">
+                                                <div class="input-group">
+                                                    <span class="input-group-text custom-font-form">Alamat Peminjam</span>
+                                                    <textarea name="alamat_peminjam" id="alamat_peminjam" 
+                                                    class="form-control custom-font-form" 
+                                                    placeholder="Masukkan alamat peminjam" 
+                                                    rows="1"
+                                                    required></textarea>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="custom-input-gambar-section col-4">
+
+                                </div>
+
+                            </div>
+
+                        </div>
+                        <div class="footer-form d-flex w-100 justify-content-between">
+                            <h5 class="text-formulir m-0 mt-3" style="color: darkgray;">*Formulir ini sebagai tanda terima penggunaan aset inventaris</h5>
+                            <input class="custom-form-submit w-25 align-self-end" type="submit" value="Simpan">
+                        </div>
+
+                    </form>
+
+                </div>
+
+                <div id="popupBoxEdit" class="popup-box position-absolute bg-white top-0 rounded-1 flex-column justify-content-start align-items-center p-2" style="height: max-content;align-self: center;z-index: 9;width: 95%;">
+
+                    <div class="w-100 d-flex justify-content-between mb-2" style="height: max-content;">
+                        <h4 id="popupEditTitle" class="m-0 p-0">Edit Berita Acara</h4>
+                        <a id="tombolClosePopupEdit" class='custom-btn-action btn btn-danger btn-sm' style="height: max-content;" href='#'>
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                    <div id="popupEditBody" class="w-100"></div>
+                    <!-- Form diisi JavaScript -->
+                </div>
+
+                <div id="popupBoxDetail" class="popup-box position-absolute bg-white top-0 rounded-1 flex-column justify-content-start align-items-center p-2" style="height: max-content;align-self: center;z-index: 9;width: 95%;">
+                    <div class="w-100 d-flex justify-content-between mb-2" style="height: max-content;">
+                        <h4 id="popupDetailTitle" class="m-0 p-0">Detail Berita Acara</h4>
+                        <a id="tombolClosePopupDetail" class='custom-btn-action btn btn-danger btn-sm' href='#'>
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                    <div id="popupDetailBody" class="w-100"></div>
+                </div>
+
+                <div id="popupBoxDataBarang" class="popup-box position-absolute bg-white top-0 rounded-1 flex-column justify-content-start align-items-center p-2" style="height: max-content;align-self: center;z-index: 10;width: 95%;">
+                    <div class="w-100 d-flex justify-content-between mb-2" style="height: max-content;">
+                        <h4 id="popupDataBarangTitle" class="m-0 p-0">Tabel Data Barang</h4>
+                        <a id="tombolClosePopupDataBarang" class='custom-btn-action btn btn-danger btn-sm' href='#'>
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    </div>
+                    <p class="m-0 p-0 align-self-start">Klik pada baris tabel data untuk memilih</p>
+                    <div class="w-100" style="height: max-content;">
+                        <table id="myTable2" class="table table-bordered table-striped text-center" style="width: 100%;">
+                            <thead class="bg-secondary">
+                                <tr>
+                                    <th>No</th>
+                                    <th>Kode Asset</th>
+                                    <th>Serial Number</th>
+                                    <th>Nomor PO</th>
+                                    <th>Jenis Perangkat</th>
+                                    <th>Merek</th>
+                                    <th>Tipe Perangkat</th>
+                                    <th>Tanggal Pembelian</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php
+                                $no = 1;
+                                while ($row = $result_assets2->fetch_assoc()):
+
+                                    $kode_assets = !empty($row['kode_assets']) ? htmlspecialchars($row['kode_assets']) : '-';
+                                    // PO
+                                    $no_po = !empty($row['no_po']) ? htmlspecialchars($row['no_po']) : '-';
+
+                                    // Serial Number
+                                    $serial = !empty($row['serial_number']) ? htmlspecialchars($row['serial_number']) : '-';
+
+                                    // Jenis Perangkat
+                                    $jenis_perangkat = !empty($row['category']) ? htmlspecialchars($row['category']) : '-';
+
+                                    // Merek (gabungan manufacturer + asset name)
+                                    $merek = !empty($row['merk']) ? htmlspecialchars($row['merk']) : '-';
+
+                                    // Tahun Perolehan
+                                    if (!empty($row['tgl_pembelian']) && $row['tgl_pembelian'] !== '0000-00-00') {
+                                        $tgl_pembelian = date('d-m-Y', strtotime($row['tgl_pembelian']));
+                                    } else {
+                                        $tgl_pembelian = '-';
+                                    }
+
+                                    // Tipe Perangkat
+                                    $type = !empty($row['type']) ? htmlspecialchars($row['type']) : '-';
+
+                                    //hidden input
+                                    $satuan = !empty($row['satuan']) ? htmlspecialchars($row['satuan']) : '-';
+                                    $cpu = !empty($row['cpu']) ? htmlspecialchars($row['cpu']) : '-';
+                                    $os = !empty($row['os']) ? htmlspecialchars($row['os']) : '-';
+                                    $ram = !empty($row['ram']) ? htmlspecialchars($row['ram']) : '-';
+                                    $storage = !empty($row['storage']) ? htmlspecialchars($row['storage']) : '-';
+                                    $gpu = !empty($row['gpu']) ? htmlspecialchars($row['gpu']) : '-';
+                                    $displays = !empty($row['display']) ? htmlspecialchars($row['display']) : '-';
+                                    $lain = !empty($row['lain']) ? htmlspecialchars($row['lain']) : '-';
+                                    $merk_monitor = !empty($row['merk_monitor']) ? htmlspecialchars($row['merk_monitor']) : '-';
+                                    $sn_monitor = !empty($row['sn_monitor']) ? htmlspecialchars($row['sn_monitor']) : '-';
+                                    $merk_keyboard = !empty($row['merk_keyboard']) ? htmlspecialchars($row['merk_keyboard']) : '-';
+                                    $sn_keyboard = !empty($row['sn_keyboard']) ? htmlspecialchars($row['sn_keyboard']) : '-';
+                                    $merk_mouse = !empty($row['merk_mouse']) ? htmlspecialchars($row['merk_mouse']) : '-';
+                                    $sn_mouse = !empty($row['sn_mouse']) ? htmlspecialchars($row['sn_mouse']) : '-';
+                                    $qty_id = !empty($row['qty_id']) ? htmlspecialchars($row['qty_id']) : '-';
+                                    $user = !empty($row['user']) ? htmlspecialchars($row['user']) : '-';
+
+                                ?>
+                                    <tr
+                                        class="pilih-barang"
+                                        data-kode="<?= $kode_assets ?>"
+                                        data-serial="<?= $serial ?>"
+                                        data-nopo="<?= $no_po ?>"
+                                        data-jenis="<?= $jenis_perangkat ?>"
+                                        data-merek="<?= $merek ?>"
+                                        data-type="<?= $type ?>"
+                                        data-tglpembelian="<?= $tgl_pembelian ?>"
+                                        data-satuan="<?= $satuan ?>"
+                                        data-cpu="<?= $cpu ?>"
+                                        data-os="<?= $os ?>"
+                                        data-ram="<?= $ram ?>"
+                                        data-storage="<?= $storage ?>"
+                                        data-gpu="<?= $gpu ?>"
+                                        data-displays="<?= $displays ?>"
+                                        data-lain="<?= $lain ?>"
+                                        data-merkmonitor="<?= $merk_monitor ?>"
+                                        data-snmonitor="<?= $sn_monitor ?>"
+                                        data-merkkeyboard="<?= $merk_keyboard ?>"
+                                        data-snkeyboard="<?= $sn_keyboard ?>"
+                                        data-merkmouse="<?= $merk_mouse ?>"
+                                        data-snmouse="<?= $sn_mouse ?>"
+                                        data-qtyid="<?= $qty_id ?>"
+                                        data-user="<?= $user ?>"
+                                        >
+                                        <td><?= $no ?></td>
+                                        <td><?= $kode_assets ?></td>
+                                        <td><?= $serial ?></td>
+                                        <td><?= $no_po ?></td>
+                                        <td><?= $jenis_perangkat ?></td>
+                                        <td><?= $merek ?></td>
+                                        <td><?= $type ?></td>
+                                        <td><?= $tgl_pembelian ?></td>
+                                    </tr>
+                                <?php
+                                    $no++;
+                                endwhile;
+                                ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+    </section>
+    
+    </main>
+
+    <div id="popupBG" class="popup-bg position-absolute w-100 h-100" style="background-color: rgba(0,0,0,0.5);z-index: 8;"></div>
+    <div id="popupBG2" class="popup-bg position-absolute w-100 h-100" style="background-color: rgba(0,0,0,0.2); z-index: 9;"></div>
+
+    <!--Awal::Footer Content-->
+        <footer class="custom-footer d-flex position-relative p-2" style="border-top: whitesmoke solid 1px; box-shadow: 0px 7px 10px black; color: grey;">
+            <p class="position-absolute" style="right: 15px;bottom:7px;color: grey;"><strong>Version </strong>1.1.0</p>
+        <p class="pt-2 ps-1"><strong>Copyright &copy 2025</p></strong><p class="pt-2 ps-1 fw-bold text-primary">MIS MSAL.</p><p class="pt-2 ps-1"> All rights reserved</p>
+        </footer>
+    <!--Akhir::Footer Content-->
+    </div>
+    
+<script>
+    //DataTables
+    $(document).ready(function() {
+        $('#myTable').DataTable({
+            responsive: true,
+            autoWidth: true,
+            language: {
+                url: "../assets/json/id.json"
+            },
+            columnDefs: [{
+                    targets: -1,
+                    orderable: false
+                }, // Kolom Actions tidak bisa di-sort
+
+            ],
+            initComplete: function() {
+                // Sembunyikan skeleton
+                $('#tableSkeleton').fadeOut(200, function() {
+                    $('#tabelUtama').fadeIn(200);
+                });
+            }
+        });
+    });
+</script>
+
+<script>
+    //Delete data
+    //Sistem tombol popup delete
+    document.addEventListener('DOMContentLoaded', function() {
+        const close = document.getElementById('tombolClosePopupDelete');
+        const accDelete = document.getElementById('tombolAccDelete');
+        const box = document.getElementById('popupBoxDelete');
+        const background = document.getElementById('popupBG');
+
+        let selectedId = null;
+
+        document.querySelectorAll('.tombolPopupDelete').forEach(function(btn) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                const selectedId = this.getAttribute('data-id');
+                const isPending = this.getAttribute('data-pending') === 'true';
+                const pendingValue = isPending ? 1 : 0;
+
+                // set POST value
+                document.getElementById('deleteId').value = selectedId;
+                document.getElementById('deletePending').value = pendingValue;
+
+                const alasanWrapper = document.getElementById('alasanWrapper');
+                const alasanHapus = document.getElementById('alasanHapus');
+
+                // reset dulu
+                alasanWrapper.classList.add('d-none');
+                alasanHapus.required = false;
+                alasanHapus.value = '';
+
+                // ===== JIKA PENDING =====
+                if (isPending) {
+                    alasanWrapper.classList.remove('d-none');
+                    alasanHapus.required = true;
+                }
+
+                // ===== WARNING TETAP PUNYA KAMU =====
+                const oldWarning = box.querySelector('.warning-approval');
+                if (oldWarning) oldWarning.remove();
+
+                if (isPending) {
+                    const buttonWrapper = box.querySelector('.w-50.d-flex.justify-content-around');
+
+                    const warning = document.createElement('p');
+                    warning.className = 'warning-approval text-warning mt-3 text-center fs-7 border border-start-0 border-end-0 border-bottom-0';
+                    warning.innerHTML = `
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Surat sudah ada yang menyetujui, data yang akan dihapus butuh approval pihak terkait.
+                    `;
+
+                    buttonWrapper.insertAdjacentElement('afterend', warning);
+                }
+
+                // ===== SISTEM POPUP ASLI (TIDAK DIUBAH) =====
+                box.classList.add('aktifPopup');
+                background.classList.add('aktifPopup');
+                box.classList.add('scale-in-center');
+                box.classList.remove('scale-out-center');
+                background.classList.add('fade-in');
+                background.classList.remove('fade-out');
+            });
+        });
+
+
+        close.addEventListener('click', function(e) {
+            e.preventDefault();
+            box.classList.remove('aktifPopup');
+            background.classList.remove('aktifPopup');
+        });
+
+
+        background.addEventListener('click', function() {
+            box.classList.remove('aktifPopup');
+            background.classList.remove('aktifPopup');
+        });
+
+    });
+</script>
+
+<script> //Form Input
+    //Sistem tombol popup input
+    document.addEventListener('DOMContentLoaded', function() {
+        const open = document.getElementById('tombolInputPopup');
+        const close = document.getElementById('tombolClosePopup');
+        const box = document.getElementById('popupBoxInput');
+        const background = document.getElementById('popupBG');
+        const tabel = document.getElementById('custom-main');
+
+        open.addEventListener('click', function() {
+            box.classList.add('aktifPopup');
+            background.classList.add('aktifPopup');
+            box.classList.add('scale-in-center');
+            box.classList.remove('scale-out-center');
+            background.classList.add('fade-in');
+            background.classList.remove('fade-out');
+            // tabel.style.overflowY = 'hidden';
+        });
+
+        close.addEventListener('click', function() {
+            box.classList.remove('aktifPopup');
+            background.classList.remove('aktifPopup');
+            // tabel.style.overflowY = 'auto';
+        });
+        background.addEventListener('click', function() {
+            box.classList.remove('aktifPopup');
+            background.classList.remove('aktifPopup');
+            // tabel.style.overflowY = 'auto';
+        });
+    });
+    //Trigger data karyawan via PT
+    const ptSelect = document.getElementById('perusahaan');
+    const lantaiWrapper = document.getElementById('lantai-wrapper');
+    const userWrapper = document.getElementById('user-wrapper');
+    const alamatWrapper = document.getElementById('alamat-wrapper');
+
+
+    // Saat PT dipilih
+    ptSelect.addEventListener('change', function() {
+        const selectedPT = this.value;
+        if (selectedPT === 'PT.MSAL (HO)') {
+            lantaiWrapper.style.display = 'flex';
+            userWrapper.style.display = 'flex';
+            alamatWrapper.style.display = 'flex';
+        } else if (selectedPT === 'PT.MSAL (SITE)' || selectedPT !== 'PT.MSAL (HO)') {
+            lantaiWrapper.style.display = 'flex';
+            userWrapper.style.display = 'flex';
+            alamatWrapper.style.display = 'flex';
+        } else {
+            lantaiWrapper.style.display = 'none';
+            userWrapper.style.display = 'none';
+            alamatWrapper.style.display = 'flex';
+            document.getElementById('lokasi').value = '';
+            document.getElementById('user').innerHTML = '<option value="">-- Pilih Pengguna --</option>';
+            document.getElementById('atasan_peminjam').innerHTML = '<option value="">-- Pilih Atasan Pengguna --</option>';
+            document.getElementById('alamat_peminjam').value = '';
+        }
+    });
+
+    //Fungsi Sortir Karyawan dan Atasan Karyawan
+    const userSelect = document.getElementById('user');
+    const lantaiSelect = document.getElementById('lokasi');
+
+    // Data user dari PHP dimasukkan ke JS
+    const dataKaryawan = <?= json_encode($data_karyawan) ?>;
+    const dataDeptHead = <?= json_encode($data_atasan) ?>;
+
+    lantaiSelect.addEventListener('change', function() {
+        const selectedLantai = this.value;
+        userSelect.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
+
+        if (selectedLantai === '') {
+            userSelect.disabled = true;
+            return;
+        }
+
+        // Filter berdasarkan lantai
+        const filtered = dataKaryawan.filter(row => row.lantai === selectedLantai);
+
+        filtered.forEach(row => {
+            const label = `${row.nama} - ${row.posisi} (${row.departemen})`;
+            const option = document.createElement('option');
+            option.value = row.nama;
+            option.textContent = label;
+            userSelect.appendChild(option);
+        });
+
+        userSelect.disabled = false;
+    });
+    const atasanSelect = document.getElementById('atasan_peminjam');
+
+    userSelect.addEventListener('change', function() {
+        const selectedNama = this.value;
+        const userData = dataKaryawan.find(k => k.nama === selectedNama);
+
+        atasanSelect.innerHTML = '<option value="">-- Pilih Atasan Pengguna --</option>';
+
+        if (!userData) {
+            atasanSelect.disabled = true;
+            return;
+        }
+
+        if (userData.jabatan === "Dept. Head" || userData.jabatan === "AVP Head") {
+            atasanSelect.innerHTML = '<option value="-">-</option>';
+            atasanSelect.disabled = false;
+            return;
+        }
+
+        // Filter atasan berdasarkan departemen yang sama
+        const userDept = userData.departemen;
+        const filteredAtasan = dataDeptHead.filter(a => a.departemen === userDept);
+
+        filteredAtasan.forEach(atasan => {
+            const option = document.createElement('option');
+            option.value = atasan.nama;
+            option.textContent = `${atasan.nama} - ${atasan.posisi} (${atasan.departemen})`;
+            atasanSelect.appendChild(option);
+        });
+
+        atasanSelect.disabled = filteredAtasan.length === 0;
+    });
+
+</script>
+
+<script> //Form Edit
+    document.addEventListener('DOMContentLoaded', function() {
+        // utility function untuk escape HTML
+        function escapeHtml(str = '') {
+            return String(str)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        // Konversi tanggal ke format Romawi (MM/YYYY)
+        function formatTanggalRomawi(tanggalStr) {
+            const bulanRomawi = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+            const d = new Date(tanggalStr);
+            if (isNaN(d)) return tanggalStr;
+            return bulanRomawi[d.getMonth() + 1] + '/' + d.getFullYear();
+        }
+
+        // Ambil elemen popup
+        const box = document.getElementById('popupBoxEdit');
+        const bg = document.getElementById('popupBG');
+        const closeBtn = document.getElementById('tombolClosePopupEdit');
+        const body = document.getElementById('popupEditBody');
+        const titleEl = document.getElementById('popupEditTitle') || (box ? box.querySelector('h4') : null);
+        const button = document.querySelector('.tombolPopupEdit');
+        const tabel = document.getElementById('custom-main');
+
+        button.addEventListener('click', function() {
+            tabel.style.overflowY = 'hidden';
+        });
+
+        closeBtn.addEventListener('click', function() {
+            tabel.style.overflowY = 'auto';
+        });
+        bg.addEventListener('click', function() {
+            tabel.style.overflowY = 'auto';
+        });
+
+        if (!box || !bg || !body) {
+            console.error('Popup elements not found: pastikan #popupBoxEdit, #popupBG, #popupEditBody ada di DOM.');
+            return;
+        }
+        // Untuk Judul Popup
+        document.addEventListener('click', function(e) {
+            const btn = e.target.closest('.tombolPopupEdit');
+            if (!btn) return;
+            e.preventDefault();
+
+            const id = btn.getAttribute('data-id');
+            if (!id) {
+                body.innerHTML = `<div class="alert alert-danger">ID tidak ditemukan.</div>`;
+                if (titleEl) titleEl.textContent = 'Edit Berita Acara';
+                openPopup();
+                return;
+            }
+
+            // fetch data JSON (harus mengembalikan { data, atasan, karyawan })
+            fetch('get_edit_ba_serah-terima-asset.php?id=' + encodeURIComponent(id), {
+                    cache: 'no-store'
+                })
+                .then(resp => {
+                    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                    return resp.json();
+                })
+                .then(res => {
+                    if (res.error) throw new Error(res.error);
+                    // render form langsung (tanpa loading)
+                    console.log("DEBUG RESPONSE:", res);
+                    if (!res || !res.data) {
+                        throw new Error('Data tidak ditemukan atau kosong');
+                    }
+                    renderEditForm(res.data || [], res.atasan || [], res.karyawan || []);
+                    if (titleEl)
+                        titleEl.textContent = 'Edit Berita Acara ' + escapeHtml(res.data.nomor_ba) +
+                        ' Periode ' + escapeHtml(formatTanggalRomawi(res.data.tanggal));
+                    openPopup();
+                })
+                .catch(err => {
+                    console.error('Gagal load data edit:', err);
+                    body.innerHTML = `<div class="alert alert-danger">Gagal memuat data: ${escapeHtml(err.message)}</div>`;
+                    if (titleEl) titleEl.textContent = 'Edit Berita Acara';
+                    openPopup();
+                });
+        });
+
+        function openPopup() {
+            box.classList.add('aktifPopup');
+            bg.classList.add('aktifPopup');
+            box.classList.add('scale-in-center');
+            box.classList.remove('scale-out-center');
+            bg.classList.add('fade-in');
+            bg.classList.remove('fade-out');
+
+        }
+
+        function closePopup(e) {
+            if (e) e.preventDefault();
+            body.querySelectorAll('img').forEach(img => {
+                if (img.src && img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+            });
+            body.innerHTML = '';
+            if (titleEl) titleEl.textContent = 'Edit Berita Acara';
+            box.classList.remove('aktifPopup');
+            bg.classList.remove('aktifPopup');
+        }
+
+        closeBtn.addEventListener('click', closePopup);
+        bg.addEventListener('click', closePopup);
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closePopup();
+        });
+
+        // ====== Render form (meng-generate HTML form di popupEditBody) ======
+        function renderEditForm(data, atasan, karyawan) {
+            const currentYear = new Date().getFullYear();
+
+            body.innerHTML = `
+                <form class="popupEdit d-flex flex-column" method="post" action="proses_edit.php" enctype="multipart/form-data">
+                    <input type="hidden" name="id" value="${escapeHtml(data.id)}">
+                    <div class="form-section">
+                        <div class="row position-relative">
+
+                            <div class="custom-input-form col-8">
+                                <h4>Data BA Serah Terima Penggunaan Asset Inventaris</h4>
+                                <div class="custom-row-tgl-no row">
+                                    <div class="custom-input-tanggal col-3">
+                                        <div class="input-group" style="width:220px;">
+                                            <span class="input-group-text custom-font-form">Tanggal</span>
+                                            <input class="form-control custom-font-form" type="date" name="tanggal" id="tanggal" id="tanggal_edit" max="${new Date().toISOString().slice(0,10)}" value="${escapeHtml(data.tanggal||'')}" required>
+                                        </div>
+                                    </div>
+                                    <div class="custom-form-nomor col-4">
+                                        <div class="input-group" style="width:180px;">
+                                            <span class="input-group-text custom-font-form">Nomor BA</span>
+                                            <input type="text" class="form-control custom-font-form" name="nomor_ba" id="nomor_ba_edit" value="${escapeHtml(data.nomor_ba||'')}" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-3 border border-1 p-1 rounded-2 me-1">
+                                    <div class="custom-row-search-db row pt-1 pb-2">
+                                        <div class="col-4 d-flex flex-column custom-row-search-db-child">
+                                            <h5>Data barang</h5>
+                                            <div class="custom-btn-data-barang d-flex">
+                                                <div class="tombolDataBarangPopup btn btn-primary rounded-end-0 btn-lg" data-target="edit"><i class="bi bi-search"></i></div>
+                                                <!-- <div class="btn btn-primary rounded-start-0" id="openScanModal"><i class="bi bi-qr-code-scan"></i></div> -->
+                                                <button type="button" id="openScanModal" class="btn btn-primary rounded-start-0 btn-lg">
+                                                    <i class="bi bi-qr-code-scan"></i>
+                                                </button>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="row pe-0 w-100">
+
+                                        <div class="custom-form-sn col-6">
+                                            <div class="input-group">
+                                                <span class="input-group-text custom-font-form" style="padding-right:63px;">SN</span>
+                                                <input id="serial_number_edit" class="form-control custom-font-form" type="text" name="sn" value="${escapeHtml(data.sn||'')}" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="custom-form-nopo col-6">
+                                            <div class="input-group">
+                                                <span class="input-group-text custom-font-form" style="padding-right:52px;">Nomor PO</span>
+                                                <input id="nomor_po_edit" class="form-control custom-font-form" type="text" name="nomor_po" value="${escapeHtml(data.no_po||'')}" readonly>
+                                            </div>
+                                        </div>
+
+                                        <div class="custom-form-merk col-6 mt-3">
+                                            <div class="input-group">
+                                                <span class="input-group-text custom-font-form" style="padding-right:37px;">Merek</span>
+                                                <input id="merek_edit" class="form-control custom-font-form" type="text" name="merek" value="${escapeHtml(data.merek||'')}" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="custom-form-type col-6 mt-3">
+                                            <div class="input-group ">
+                                                <span class="input-group-text custom-font-form">Tipe Perangkat</span>
+                                                <input id="type_edit" type="text" class="form-control custom-font-form" name="type" value="${escapeHtml(data.type||'')}" readonly>
+                                            </div>
+                                        </div>
+
+                                        <div class="custom-form-jp col-6 mt-3">
+                                            <div class="input-group">
+                                                <span class="input-group-text custom-font-form" style="padding-right:18px;">Jenis Perangkat</span>
+                                                <input id="jenis_perangkat_edit" class="form-control custom-font-form" type="text" name="jenis_perangkat" value="${escapeHtml(data.categories||'')}" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="custom-form-tp col-6 mt-3">
+                                            <div class="input-group">
+                                                <span class="input-group-text custom-font-form" style="padding-right:12px;">Tanggal Pembelian</span>
+                                                <input id="tanggal_pembelian_edit" type="text" class="form-control custom-font-form" name="tanggal_pembelian" value="${escapeHtml(data.tgl_pembelian||'')}" readonly>
+                                            </div>
+                                        </div>
+                                        <div class="custom-form-tp col-6 mt-3 d-none">
+                                            
+                                            <input id="kode_edit" type="text" class="form-control custom-font-form" name="kode" value="${escapeHtml(data.kode_assets||'')}" readonly>
+                                            <input id="satuan_edit" type="text" class="form-control custom-font-form" name="satuan" value="${escapeHtml(data.satuan||'')}" readonly>
+                                            <input id="cpu_edit" type="text" class="form-control custom-font-form" name="cpu" value="${escapeHtml(data.cpu||'')}" readonly>
+                                            <input id="os_edit" type="text" class="form-control custom-font-form" name="os" value="${escapeHtml(data.os||'')}" readonly>
+                                            <input id="ram_edit" type="text" class="form-control custom-font-form" name="ram" value="${escapeHtml(data.ram||'')}" readonly>
+                                            <input id="storage_edit" type="text" class="form-control custom-font-form" name="storage" value="${escapeHtml(data.storage||'')}" readonly>
+                                            <input id="gpu_edit" type="text" class="form-control custom-font-form" name="gpu" value="${escapeHtml(data.gpu||'')}" readonly>
+                                            <input id="displays_edit" type="text" class="form-control custom-font-form" name="display" value="${escapeHtml(data.display||'')}" readonly>
+                                            <input id="lain_edit" type="text" class="form-control custom-font-form" name="lain" value="${escapeHtml(data.lain||'')}" readonly>
+                                            <input id="merkmonitor_edit" type="text" class="form-control custom-font-form" name="merkmonitor" value="${escapeHtml(data.merk_monitor||'')}" readonly>
+                                            <input id="snmonitor_edit" type="text" class="form-control custom-font-form" name="snmonitor" value="${escapeHtml(data.sn_monitor||'')}" readonly>
+                                            <input id="merkkeyboard_edit" type="text" class="form-control custom-font-form" name="merkkeyboard" value="${escapeHtml(data.merk_keyboard||'')}" readonly>
+                                            <input id="snkeyboard_edit" type="text" class="form-control custom-font-form" name="snkeyboard" value="${escapeHtml(data.sn_keyboard||'')}" readonly>
+                                            <input id="merkmouse_edit" type="text" class="form-control custom-font-form" name="merkmouse" value="${escapeHtml(data.merk_mouse||'')}" readonly>
+                                            <input id="snmouse_edit" type="text" class="form-control custom-font-form" name="snmouse" value="${escapeHtml(data.sn_mouse||'')}" readonly>
+                                            <input id="qtyid_edit" type="text" class="form-control custom-font-form" name="qtyid" value="${escapeHtml(data.qty_id||'')}" readonly>
+                                            <input id="user_edit" type="text" class="form-control custom-font-form" name="user" value="${escapeHtml(data.user||'')}" readonly>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="row mt-3 border border-1 p-1 rounded-2 me-1">
+                                    <div class="row">
+                                        <h5 class="text-data-pengguna">Data Peminjam</h5>
+                                    </div>
+
+                                    <div class="custom-row-lokasi-lantai row">
+                                        <div class="custom-form-lokasi col-4">
+                                            <div class="input-group">
+                                                <span class="input-group-text custom-font-form">PT</span>
+                                                <select name="pt" id="edit-pt" class="form-select custom-font-form" required>
+                                                    <option value="">-- Pilih Lokasi --</option>
+                                                    <?php
+                                                    if ($pt_session === 'PT.MSAL (HO)') {
+                                                    ?>
+                                                        <option value="PT.MSAL (HO)" ${data.pt === 'PT.MSAL (HO)' ? 'selected' : ''}>PT.MSAL (HO)</option>
+                                                    <?php
+                                                    } elseif ($pt_session === 'PT.MSAL (PKS)') {
+                                                    ?>
+                                                        <option value="PT.MSAL (PKS)" ${data.pt === 'PT.MSAL (PKS)' ? 'selected' : ''}>PT.MSAL (PKS)</option>
+                                                    <?php
+                                                    } elseif ($pt_session === 'PT.MSAL (SITE)') {
+                                                    ?>
+                                                        <option value="PT.MSAL (SITE)" ${data.pt === 'PT.MSAL (SITE)' ? 'selected' : ''}>PT.MSAL (SITE)</option>
+                                                    <?php
+                                                    } elseif ($pt_session === 'PT.PSAM (PKS)') {
+                                                    ?>
+                                                        <option value="PT.PSAM (PKS)" ${data.pt === 'PT.PSAM (PKS)' ? 'selected' : ''}>PT.PSAM (PKS)</option>
+                                                    <?php
+                                                    } elseif ($pt_session === 'PT.PSAM (SITE)') {
+                                                    ?>
+                                                        <option value="PT.PSAM (SITE)" ${data.pt === 'PT.PSAM (SITE)' ? 'selected' : ''}>PT.PSAM (SITE)</option>
+                                                    <?php
+                                                    } elseif ($pt_session === 'PT.MAPA') {
+                                                    ?>
+                                                        <option value="PT.MAPA" ${data.pt === 'PT.MAPA' ? 'selected' : ''}>PT.MAPA</option>
+                                                    <?php
+                                                    } elseif ($pt_session === 'PT.PEAK (PKS)') {
+                                                    ?>
+                                                        <option value="PT.PEAK (PKS)" ${data.pt === 'PT.PEAK (PKS)' ? 'selected' : ''}>PT.PEAK (PKS)</option>
+                                                    <?php
+                                                    } elseif ($pt_session === 'PT.PEAK (SITE)') {
+                                                    ?>
+                                                        <option value="PT.PEAK (SITE)" ${data.pt === 'PT.PEAK (SITE)' ? 'selected' : ''}>PT.PEAK (SITE)</option>
+                                                    <?php
+                                                    } elseif ($pt_session === 'RO PALANGKARAYA') {
+                                                    ?>
+                                                        <option value="RO PALANGKARAYA" ${data.pt === 'RO PALANGKARAYA' ? 'selected' : ''}>RO PALANGKARAYA</option>
+                                                    <?php
+                                                    } elseif ($pt_session === 'RO SAMPIT') {
+                                                    ?>
+                                                        <option value="RO SAMPIT" ${data.pt === 'RO SAMPIT' ? 'selected' : ''}>RO SAMPIT</option>
+                                                    <?php
+                                                    } else {
+                                                    ?>
+                                                        <option value="-">-</option>
+                                                    <?php
+                                                    }
+                                                    ?>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <input type="hidden" name="id_pt" value="${escapeHtml(data.id_pt||'')}">
+                                        <?php
+                                        if ($pt_session === 'PT.MSAL (HO)') {
+                                        ?>
+                                        <div class="custom-form-lantai col-3">
+                                            <div class="input-group">
+                                            <span class="input-group-text custom-font-form">Lantai</span>
+                                            <select name="lokasi" id="edit-lokasi" class="form-select custom-font-form" ${data.pt !== 'PT.MSAL (HO)' ? 'disabled' : ''} required>
+                                                <option value="">-- Pilih Lantai --</option>
+                                            </select>
+                                            </div>
+                                        </div>
+                                        <?php } elseif ($pt_session === 'PT.MSAL (SITE)' || $pt_session !== 'PT.MSAL (HO)') {
+                                        ?>
+                                            <div class="custom-form-lantai col-5">
+                                                <div class="input-group">
+                                                    <span class="input-group-text custom-font-form">Lokasi</span>
+                                                    <input type="text" name="lokasi" class="form-control custom-font-form " placeholder="Detail Lokasi" value="${escapeHtml(data.lokasi||'')}" required>
+                                                </div>
+                                            </div>
+                                        <?php } else {
+                                        ?>
+                                            <div class="custom-form-lantai col-5">
+                                                <div class="input-group">
+                                                    <span class="input-group-text custom-font-form">Lokasi</span>
+                                                    <input type="text" name="lokasi" class="form-control custom-font-form " placeholder="Detail Lokasi" required>
+                                                </div>
+                                            </div>
+                                        <?php
+                                        }
+                                        ?>
+                                    </div>
+
+                                    <div class="custom-row-pengguna-atasan row mt-3 pe-0">
+                                        
+                                        <div class="custom-form-pengguna2 col-6">
+                                            <div class="input-group">
+                                            <?php
+                                            if ($pt_session === 'PT.MSAL (HO)') {
+                                            ?>
+                                            <span class="input-group-text custom-font-form">Pengguna</span>
+                                            <select name="peminjam" id="edit-user" class="form-select custom-font-form" required>
+                                                <option value="">-- Pilih Pengguna --</option>
+                                                ${karyawan.map(user => `
+                                                    <option value="${escapeHtml(user.nama)}" ${data.peminjam === user.nama ? 'selected' : ''}>
+                                                        ${escapeHtml(user.nama)}
+                                                    </option>
+                                                `).join('')}
+                                            </select>
+                                            <?php
+                                            } elseif ($pt_session === 'PT.MSAL (SITE)' || $pt_session !== 'PT.MSAL (HO)') {
+                                            ?>
+                                                <span class="input-group-text custom-font-form">Pengguna</span>
+                                                <input type="text" name="peminjam" class="form-control custom-font-form" placeholder="Nama Pengguna" value="${escapeHtml(data.peminjam||'')}" required>
+                                            <?php
+                                            } else {
+                                            ?>
+                                                <span class="input-group-text custom-font-form">Pengguna</span>
+                                                <input type="text" name="peminjam" class="form-control custom-font-form" placeholder="Nama Pengguna" required>
+                                            <?php
+                                            }
+                                            ?>
+                                            </div>
+                                        </div>
+
+                                        <div class="custom-form-atasan col-6 pe-0">
+                                            <div class="input-group">
+
+                                                <?php
+                                                if ($pt_session === 'PT.MSAL (HO)') {
+                                                ?>
+                                                    <span class="input-group-text custom-font-form">Atasan Pengguna</span>
+                                                    <select name="atasan_peminjam" id="edit-atasan" class="form-select custom-font-form">
+                                                        <option value="">-- Pilih Atasan Pengguna --</option>
+                                                        ${atasan.map(a => `
+                                                        <option value="${escapeHtml(a.nama)}" ${data.atasan_peminjam === a.nama ? 'selected' : ''}>
+                                                            ${escapeHtml(a.nama)}
+                                                        </option>
+                                                    `).join('')}
+                                                    </select>
+                                                <?php
+                                                } elseif ($pt_session === 'PT.MSAL (SITE)' || $pt_session !== 'PT.MSAL (HO)') {
+                                                ?>
+                                                    <span class="input-group-text custom-font-form">Atasan Pengguna</span>
+                                                    <input type="text" name="atasan_peminjam" class="form-control custom-font-form" placeholder="Atasan Pengguna" value="${escapeHtml(data.atasan_peminjam||'')}" required>
+                                                <?php
+                                                } else {
+                                                ?>
+                                                    <span class="input-group-text custom-font-form">Atasan Pengguna</span>
+                                                    <input type="text" name="atasan_peminjam" class="form-control custom-font-form" placeholder="Atasan Pengguna" required>
+                                                <?php
+                                                }
+                                                ?>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                    <div class="row mt-3 pe-0">
+                                        <div class="custom-form-alamat col-12">
+                                            <div class="input-group">
+                                                <span class="input-group-text custom-font-form">Alamat Peminjam</span>
+                                                <textarea name="alamat_peminjam" id="alamat_peminjam" 
+                                                class="form-control custom-font-form" 
+                                                placeholder="Masukkan alamat peminjam" 
+                                                rows="1"
+                                                required>${escapeHtml(data.alamat_peminjam||'')}</textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="custom-input-gambar-section col-4">
+
+                                <div class="mt-1" style="height:max-content;">
+                                    <div class="row mt-3 pe-0 custom-form-ae">
+                                        <div class="input-group">
+                                            <span class="input-group-text custom-font-form">Alasan perubahan</span>
+                                            <textarea name="alasan_perubahan" class="form-control custom-font-form" style="font-size:small;" rows="2" required></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                ${
+                                (data.pending_edit == "1")
+                                ? `
+                                <div class="mt-1 ps-1" style="height:max-content;">
+                                    <div class="row"><h6 class="text-warning">*Ada data edit anda yang masih menunggu persetujuan</h6></div>
+                                    <div class="row overflow-x-auto ps-2">
+                                        <table id="" class="table table-bordered table-striped text-start"
+                                        style="width: max-content; table-layout: auto; white-space: nowrap;"
+                                        >
+                                            <thead>
+                                            <tr>
+                                                <th class="text-start">Data</th>
+                                                ${data.header_edit.map(h => `<th class="text-start">${h}</th>`).join('')}
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <tr>
+                                                <td class="text-start">Lama</td>
+                                                ${data.data_edit_lama.map(v => `<td class="text-start">${v}</td>`).join('')}
+                                            </tr>
+                                            <tr>
+                                                <td class="text-start">Baru</td>
+                                                ${data.data_edit_baru.map(v => `<td class="text-start">${v}</td>`).join('')}
+                                            </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                `
+                                : ``
+                                }
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="footer-form d-flex w-100 justify-content-between">
+                        <h5 class="custom-font-form text-formulir m-0 mt-3" style="color: darkgray;">*Formulir ini sebagai tanda terima penggunaan aset inventaris</h5>
+                        <div class="custom-form-submit w-25 align-self-end">
+                                ${
+                                (data.pending_edit == "1")
+                                ? `
+                                <p class="custom-font-form m-0 mb-1 text-warning"><i class="bi bi-exclamation-triangle"></i> Dengan melakukan submit, data edit anda yang saat ini menunggu persetujuan akan dihapus.</p>
+                                `
+                                :
+                                (
+                                    (data.approval_1 == 1 ||
+                                    data.approval_2 == 1 ||
+                                    data.approval_3 == 1 ||
+                                    data.approval_4 == 1 ||
+                                    data.approval_5 == 1)
+                                    ? `
+                                    <p class="custom-font-form m-0 mb-1 text-warning"><i class="bi bi-exclamation-triangle"></i> Surat sudah ada yang menyetujui, data yang diedit akan butuh approval pihak terkait.</p>
+                                    `
+                                    : ``
+                                )
+                                }
+                            <input class="w-100 mt-0" type="submit" value="Simpan">
+                        </div>
+                        
+                    </div>
+
+                </form>
+            `;
+
+            // setelah render, wire select controls
+            try {
+                wireEditFormSelects(data, karyawan, atasan);
+            } catch (ex) {
+                console.warn('wireEditFormSelects error:', ex);
+            }
+        }
+
+        // ====== WIRING SELECT (lantai->user->atasan) ======
+        function wireEditFormSelects(data, karyawan, atasan) {
+            const ptSelect = document.getElementById('edit-pt');
+            const lantaiSelect = document.getElementById('edit-lokasi');
+            const userSelect = document.getElementById('edit-user');
+            const atasanSelect = document.getElementById('edit-atasan');
+
+            if (!ptSelect || !lantaiSelect || !userSelect || !atasanSelect) {
+                console.warn('Some edit selects not found');
+                return;
+            }
+
+            // unique lantai
+            const uniqueLantai = [...new Set(karyawan.map(k => k.lantai).filter(Boolean))].sort((a, b) => {
+                const ma = /^LT\.(\d+)/i.exec(a),
+                    mb = /^LT\.(\d+)/i.exec(b);
+                if (ma && mb) return parseInt(ma[1]) - parseInt(mb[1]);
+                return String(a).localeCompare(String(b));
+            });
+
+            lantaiSelect.innerHTML = '<option value="">-- Pilih Lantai --</option>' + uniqueLantai.map(v => {
+                const m = /^LT\.(\d+)/i.exec(v);
+                const label = m ? ('Lantai ' + m[1]) : v;
+                const sel = (data.lokasi === v) ? ' selected' : '';
+                return `<option value="${escapeHtml(v)}"${sel}>${escapeHtml(label)}</option>`;
+            }).join('');
+
+            function loadUsersByLantai(lantai, selectedUser) {
+                userSelect.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
+                karyawan.filter(k => k.lantai === lantai).forEach(k => {
+                    const label = `${k.nama} - ${k.posisi} (${k.departemen})`;
+                    const sel = (selectedUser ? (k.nama === selectedUser) : (k.nama === data.peminjam)) ? ' selected' : '';
+                    userSelect.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(k.nama)}"${sel}>${escapeHtml(label)}</option>`);
+                });
+            }
+
+            function loadAtasanByDept(dept, selected) {
+                atasanSelect.innerHTML = '<option value="">-- Pilih Atasan Pengguna --</option>';
+                const filtered = atasan.filter(a => a.departemen === dept);
+                filtered.forEach(a => {
+                    const label = `${a.nama} - ${a.posisi} (${a.departemen})`;
+                    const sel = (selected ? (a.nama === selected) : (a.nama === data.atasan_peminjam)) ? ' selected' : '';
+                    atasanSelect.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(a.nama)}"${sel}>${escapeHtml(label)}</option>`);
+                });
+                atasanSelect.disabled = filtered.length === 0;
+            }
+
+            // initial populate
+            if (ptSelect.value === 'PT.MSAL (HO)') {
+                lantaiSelect.disabled = false;
+                if (data.lokasi) loadUsersByLantai(data.lokasi, data.peminjam);
+                const userData = karyawan.find(k => k.nama === data.peminjam);
+                if (userData) {
+                    if (userData.jabatan && userData.jabatan.trim() === "Dept. Head" || userData.jabatan && userData.jabatan.trim() === "AVP Head") {
+                        // 🔹 kalau Dept. Head → langsung isi "-"
+                        atasanSelect.innerHTML = '<option value="-">-</option>';
+                        atasanSelect.value = "-";
+                        atasanSelect.disabled = false;
+                    } else {
+                        // 🔹 kalau bukan Dept. Head → jalankan filter biasa
+                        loadAtasanByDept(userData.departemen, data.atasan_peminjam);
+                    }
+                }
+            } else {
+                lantaiSelect.disabled = true;
+            }
+
+
+            ptSelect.addEventListener('change', function() {
+                if (this.value === 'PT.MSAL (HO)') {
+                    lantaiSelect.disabled = false;
+                } else {
+                    lantaiSelect.disabled = true;
+                    lantaiSelect.value = '';
+                    userSelect.innerHTML = '<option value="">-- Pilih Pengguna --</option>';
+                    atasanSelect.innerHTML = '<option value="">-- Pilih Atasan Pengguna --</option>';
+                    atasanSelect.disabled = true;
+                }
+            });
+
+            lantaiSelect.addEventListener('change', function() {
+                loadUsersByLantai(this.value, null);
+                atasanSelect.innerHTML = '<option value="">-- Pilih Atasan Pengguna --</option>';
+                atasanSelect.disabled = true;
+            });
+
+            userSelect.addEventListener('change', function() {
+                const userData = karyawan.find(k => k.nama === this.value);
+
+                console.log("User dipilih:", this.value);
+                console.log("userData object:", userData);
+
+                if (!userData) {
+                    atasanSelect.innerHTML = '<option value="">-- Pilih Atasan Pengguna --</option>';
+                    atasanSelect.disabled = true;
+                    return;
+                }
+
+                // Debug tambahan: cek jabatan
+                console.log("Jabatan userData:", userData.jabatan);
+
+                if (userData.jabatan && userData.jabatan.trim() === "Dept. Head" || userData.jabatan && userData.jabatan.trim() === "AVP Head") {
+                    console.log("Dept. Head atau AVP terdeteksi, atasan otomatis '-'.");
+                    atasanSelect.innerHTML = '<option value="-">-</option>';
+                    atasanSelect.disabled = false;
+                    return;
+                }
+
+                console.log("Bukan Dept. Head atau AVP, load atasan by dept:", userData.departemen);
+                loadAtasanByDept(userData.departemen, null);
+            });
+        }
+
+    });
+</script>
+
+<script> //Detail Popup
+    // Sistem tombol popup detail
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnDetailList = document.querySelectorAll('.btn-detail-ba');
+        const popupBox = document.getElementById('popupBoxDetail');
+        const popupBody = document.getElementById('popupDetailBody');
+        const closeBtn = document.getElementById('tombolClosePopupDetail');
+        const popupBG = document.getElementById('popupBG');
+        const tabel = document.getElementById('custom-main');
+
+        if (!popupBox || !popupBody || !closeBtn || !popupBG) return console.error('Popup elements missing');
+
+        function escapeHtml(str = '') {
+            return String(str)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function formatRomawi(tanggal) {
+            const bulanRomawi = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+            const d = new Date(tanggal);
+            const bulan = d.getMonth(); // 0-11
+            const tahun = d.getFullYear();
+            return `${bulanRomawi[bulan]}/${tahun}`;
+        }
+
+        function openPopup() {
+            popupBox.classList.add('aktifPopup');
+            popupBG.classList.add('aktifPopup');
+            popupBox.classList.add('scale-in-center');
+            popupBox.classList.remove('scale-out-center');
+            popupBG.classList.add('fade-in');
+            popupBG.classList.remove('fade-out');
+            // tabel.style.overflowY = 'hidden';
+        }
+
+        function closePopup() {
+            popupBody.innerHTML = '';
+            popupBox.classList.remove('aktifPopup');
+            popupBG.classList.remove('aktifPopup');
+
+            popupBox.classList.remove('scale-in-center');
+            popupBox.classList.add('scale-out-center');
+            popupBG.classList.remove('fade-in');
+            popupBG.classList.add('fade-out');
+            // tabel.style.overflowY = 'auto';
+        }
+
+        closeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            closePopup();
+        });
+
+        popupBG.addEventListener('click', closePopup);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closePopup();
+        });
+
+        btnDetailList.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const id = this.dataset.id;
+                if (!id) return alert('ID tidak ditemukan');
+
+                fetch('get_detail.php?id=' + encodeURIComponent(id), {
+                        cache: 'no-store'
+                    })
+                    .then(resp => {
+                        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                        return resp.json(); // JSON: { data, peran }
+                    })
+                    .then(res => {
+                        if (res.error) throw new Error(res.error);
+
+                        const data = res.data;
+                        const peran = res.peran;
+
+                        // build HTML tabel
+                        let html = `<h2>Detail Data Serah Terima Penggunaan Asset Inventaris ${escapeHtml(data.nomor_ba)} Periode ${formatRomawi(data.tanggal)}</h2>`;
+
+                        // Table Approval dinamis
+                        let approvalHeader = "";
+                        let approvalJabatan = "";
+                        let approvalStatus = "";
+
+                        // PIHAK PERTAMA
+                        if (peran.pihak_pertama) {
+                            approvalHeader += `<th>Pemilik</th>`;
+                            <?php
+                            if ($pt_session_query === 'PT.MSAL (HO)') {
+                            ?>
+                                approvalJabatan += `<td>Direksi MIS</td>`;
+                            <?php
+                            } elseif ($pt_session_query === 'PT.MSAL (SITE)' || $pt_session_query !== 'PT.MSAL (HO)') {
+                            ?>
+                                approvalJabatan += `<td>Direksi MIS</td>`;
+                            <?php
+                            } else {
+                            ?>
+                                approvalJabatan += `<td>N/A</td>`;
+                            <?php
+                            }
+                            ?>
+                            approvalStatus += `<td>
+                                <span class="border fw-bold ${data.approval_4 == 1 ? 'bg-success-subtle border-success-subtle text-success' : 'bg-warning-subtle border-warning-subtle text-warning'}"
+                                style="border-radius:6px;padding:6px 12px;">
+                                ${data.approval_4 == 1 ? 'Disetujui' : 'Menunggu'}
+                                </span>
+                            </td>`;
+                        }
+
+                        // PEMINJAM
+                        if (peran.peminjam) {
+                            approvalHeader += `<th>Peminjam</th>`;
+                            <?php
+                            if ($pt_session_query === 'PT.MSAL (HO)') {
+                            ?>
+                                approvalJabatan += `<td>${escapeHtml(peran.jabatan_aprv1)} ${escapeHtml(peran.departemen_aprv1)}</td>`;
+                            <?php
+                            } elseif ($pt_session_query === 'PT.MSAL (SITE)' || $pt_session_query !== 'PT.MSAL (HO)') {
+                            ?>
+                                if (peran.posisi1 !== null && peran.posisi1 !== undefined && peran.posisi1 !== '') {
+                                    approvalJabatan += `<td>${escapeHtml(peran.posisi1)}</td>`;
+                                } else {
+                                    approvalJabatan += `<td>Pengguna</td>`;
+                                }
+                            <?php
+                            } else {
+                            ?>
+                                approvalJabatan += `<td>N/A</td>`;
+                            <?php
+                            }
+                            ?>
+                            approvalStatus += `<td>
+                                <span class="border fw-bold ${data.approval_1 == 1 ? 'bg-success-subtle border-success-subtle text-success' : 'bg-warning-subtle border-warning-subtle text-warning'}"
+                                style="border-radius:6px;padding:6px 12px;">
+                                ${data.approval_1 == 1 ? 'Disetujui' : 'Menunggu'}
+                                </span>
+                            </td>`;
+                        }
+
+                        // SAKSI
+                        if (peran.saksi) {
+                            approvalHeader += `<th>Saksi</th>`;
+                            <?php
+                            if ($pt_session_query === 'PT.MSAL (HO)') {
+                            ?>
+                                approvalJabatan += `<td>${escapeHtml(peran.jabatan_aprv2)} ${escapeHtml(peran.departemen_aprv2)}</td>`;
+                            <?php
+                            } elseif ($pt_session_query === 'PT.MSAL (SITE)' || $pt_session_query !== 'PT.MSAL (HO)') {
+                            ?>
+                                approvalJabatan += `<td>${escapeHtml(peran.posisi2)}</td>`;
+                            <?php
+                            } else {
+                            ?>
+                                approvalJabatan += `<td>N/A</td>`;
+                            <?php
+                            }
+                            ?>
+                            approvalStatus += `<td>
+                                <span class="border fw-bold ${data.approval_2 == 1 ? 'bg-success-subtle border-success-subtle text-success' : 'bg-warning-subtle border-warning-subtle text-warning'}"
+                                style="border-radius:6px;padding:6px 12px;">
+                                ${data.approval_2 == 1 ? 'Disetujui' : 'Menunggu'}
+                                </span>
+                            </td>`;
+                        }
+
+                        // DIKETAHUI
+                        if (peran.diketahui) {
+                            approvalHeader += `<th>Diketahui</th>`;
+                            <?php
+                            if ($pt_session_query === 'PT.MSAL (HO)') {
+                            ?>
+                                approvalJabatan += `<td>${escapeHtml(peran.jabatan_aprv3)} ${escapeHtml(peran.departemen_aprv3)}</td>`;
+                            <?php
+                            } elseif ($pt_session_query === 'PT.MSAL (SITE)' || $pt_session_query !== 'PT.MSAL (HO)') {
+                            ?>
+                                    approvalJabatan += `<td>${escapeHtml(peran.posisi3)}</td>`;
+                            <?php
+                            } else {
+                            ?>
+                                approvalJabatan += `<td>N/A</td>`;
+                            <?php
+                            }
+                            ?>
+                            approvalStatus += `<td>
+                                <span class="border fw-bold ${data.approval_3 == 1 ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'}"
+                                style="border-radius:6px;padding:6px 12px;">
+                                ${data.approval_3 == 1 ? 'Disetujui' : 'Menunggu'}
+                                </span>
+                            </td>`;
+                        }
+
+                        // Render tabel approval hanya kalau ada minimal 1 data
+                        if (approvalHeader) {
+                            html += `
+                            <div class="custom-detail-approval">
+                            <table class="custom-detail-approval-child table w-25 table-approval">
+                                <thead>
+                                    <tr>${approvalHeader}</tr>
+                                </thead>
+                                <tbody>
+                                    <tr>${approvalJabatan}</tr>
+                                    <tr>${approvalStatus}</tr>
+                                </tbody>
+                            </table>
+                            </div>
+                            `;
+                        }
+
+
+            html += `<div class="custom-detail-container d-flex gap-2 h-100">
+            <div class="custom-detail-table w-50">
+            <h5> Data BA </h5>
+            <table class="custom-detail-table-child table table-bordered table-striped" style="width:100%;">
+                <tbody>
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Nomor BA          </th><td style="font-size:14px;width:80%;">${escapeHtml(data.nomor_ba)}</td></tr>
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Tanggal           </th><td style="font-size:14px;width:80%;">${escapeHtml(data.tanggal)}</td></tr>
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Lokasi            </th><td style="font-size:14px;width:80%;">${escapeHtml(data.pt)} ${escapeHtml(data.lokasi)}</td></tr>
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Pengguna          </th><td style="font-size:14px;width:80%;">${escapeHtml(data.peminjam)}</td></tr>
+                </tbody>
+            </table>
+            </div>
+            <div class="custom-detail-barang w-50 overflow-auto" style"max-height:490px;">
+            <h5> Data Barang </h5>
+            <table class="custom-detail-table-child table table-bordered table-striped" style="width:100%;">
+                <tbody>
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Jenis Perangkat   </th><td style="font-size:14px;width:80%;">${escapeHtml(data.categories)}</td></tr>
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Nomor PO          </th><td style="font-size:14px;width:80%;">${escapeHtml(data.no_po)}</td></tr>
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Kode Asset        </th><td style="font-size:14px;width:80%;">${escapeHtml(data.kode_assets)}</td></tr>
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Tanggal Pembelian </th><td style="font-size:14px;width:80%;">${escapeHtml(data.tgl_pembelian)}</td></tr>
+
+                    ${(data.merek && data.merek !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Merek             </th><td style="font-size:14px;width:80%;">${escapeHtml(data.merek)}</td></tr>` : ''}
+                    ${(data.sn && data.sn !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Serial Number     </th><td style="font-size:14px;width:80%;">${escapeHtml(data.sn)}</td></tr>` : ''}
+                    ${(data.cpu && data.cpu !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">CPU               </th><td style="font-size:14px;width:80%;">${escapeHtml(data.cpu)}</td></tr>` : ''}
+                    ${(data.os && data.os !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Sistem Operasi    </th><td style="font-size:14px;width:80%;">${escapeHtml(data.os)}</td></tr>` : ''}
+                    ${(data.ram && data.ram !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">RAM               </th><td style="font-size:14px;width:80%;">${escapeHtml(data.ram)}</td></tr>` : ''}
+                    ${(data.storage && data.storage !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Penyimpanan       </th><td style="font-size:14px;width:80%;">${escapeHtml(data.storage)}</td></tr>` : ''}
+                    ${(data.gpu && data.gpu !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Graphic Card      </th><td style="font-size:14px;width:80%;">${escapeHtml(data.gpu)}</td></tr>` : ''}
+                    ${(data.display && data.display !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Display           </th><td style="font-size:14px;width:80%;">${escapeHtml(data.display)}</td></tr>` : ''}
+                    ${(data.lain && data.lain !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Lainnya           </th><td style="font-size:14px;width:80%;">${escapeHtml(data.lain)}</td></tr>` : ''}
+                    ${(data.merk_monitor && data.merk_monitor !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Merk Monitor      </th><td style="font-size:14px;width:80%;">${escapeHtml(data.merk_monitor)}</td></tr>` : ''}
+                    ${(data.sn_monitor && data.sn_monitor !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">SN Monitor        </th><td style="font-size:14px;width:80%;">${escapeHtml(data.sn_monitor)}</td></tr>` : ''}
+                    ${(data.merk_keyboard && data.merk_keyboard !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Merk Keyboard     </th><td style="font-size:14px;width:80%;">${escapeHtml(data.merk_keyboard)}</td></tr>` : ''}
+                    ${(data.sn_keyboard && data.sn_keyboard !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">SN Keyboard       </th><td style="font-size:14px;width:80%;">${escapeHtml(data.sn_keyboard)}</td></tr>` : ''}
+                    ${(data.merk_mouse && data.merk_mouse !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">Merk Mouse        </th><td style="font-size:14px;width:80%;">${escapeHtml(data.merk_mouse)}</td></tr>` : ''}
+                    ${(data.sn_mouse && data.sn_mouse !== '-') ? `
+                    <tr><th style="font-size:14px;width:20%;min-width:150px;">SN Mouse          </th><td style="font-size:14px;width:80%;">${escapeHtml(data.sn_mouse)}</td></tr>` : ''}
+                </tbody>
+            </table>
+            </div>
+                    
+            </div>
+            <div class="custom-detail-histori" style="width:95%; height:max-content; min-width:200px">
+            <div class=" w-auto">
+            <h6>Histori & Pending Perubahan</h6>
+            </div>
+                <table id="popupDetailTable" class="table table-bordered table-striped" 
+                style="font-size:16px; width: auto; table-layout: auto;"
+                >
+                    <thead>
+                        <tr>
+                            <th class="text-start">Tanggal Edit</th>
+                            <th class="text-start">Status</th>
+                            <th class="text-start">Alasan Edit</th>
+                            <th class="text-start">Alasan Tolak</th>
+                            <th class="text-start">Tanggal Surat</th>
+                            <th class="text-start">Nomor Surat</th>
+                            <th class="text-start">Jenis Perangkat</th>
+                            <th class="text-start">Merek</th>
+                            <th class="text-start">Nomor PO</th>
+                            <th class="text-start">SN</th>
+                            <th class="text-start">Tanggal Pembelian</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    `;
+
+                        // Loop data_history dari response JSON
+                        (res.data_history || []).forEach(h => {
+                            // Tampilkan semua data
+                            // Jika ada lebih dari 1 pending_status = 1, tampilkan hanya yang take_for_pending = true untuk status = 1
+                            const showRow = h.pending_status != 1 || (h.pending_status == 1 && h.take_for_pending === true);
+                            if (showRow) {
+                                let rowColor = '';
+                                let textColor = '';
+                                if (h.pending_status == 1) {
+                                    rowColor = 'background-color: rgba(255, 234, 0, 0.5) !important;'; // kuning
+                                    textColor = 'color: #856404 !important;'; // teks gelap
+                                } else if (h.pending_status == 2) {
+                                    rowColor = 'background-color: #f8d7da !important;'; // merah
+                                    textColor = 'color: #721c24 !important;'; // teks gelap
+                                }
+                                html += `<tr>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.created_at)}</td>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.pending_status_nama)}</td>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.alasan_edit)}</td>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.alasan_tolak)}</td>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.tanggal)}</td>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.nomor_ba)}</td>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.categories)}</td>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.merek)}</td>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.no_po)}</td>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.sn)}</td>
+                                <td class="text-start" style="${rowColor} ${textColor}">${escapeHtml(h.tgl_pembelian)}</td>
+                            </tr>`;
+                            }
+                        });
+
+                        html += `
+                    </tbody>
+                </table>
+            </div>`;
+
+                        popupBody.innerHTML = html;
+                        openPopup();
+                        if ($.fn.DataTable) {
+                            $('#popupDetailTable').DataTable({
+                                paging: false,
+                                searching: false,
+                                info: false,
+                                ordering: false,
+                                scrollY: "410px",
+                                scrollCollapse: true,
+                                autoWidth: true,
+                                language: {
+                                    url: "../assets/json/id.json"
+                                }
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        popupBody.innerHTML = `<div class="alert alert-danger">Gagal memuat data: ${escapeHtml(err.message)}</div>`;
+                        openPopup();
+                    });
+            });
+        });
+    });
+</script>
+
+<script> //Popup Data Barang
+    document.addEventListener('DOMContentLoaded', function() {
+        var close = document.getElementById('tombolClosePopupDataBarang');
+        var box = document.getElementById('popupBoxDataBarang');
+        var background = document.getElementById('popupBG2');
+
+        // Delegasi klik: berlaku untuk tombol di form input maupun form edit
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.tombolDataBarangPopup')) {
+                box.classList.add('aktifPopup');
+                background.classList.add('aktifPopup');
+                box.classList.add('scale-in-center');
+                box.classList.remove('scale-out-center');
+                background.classList.add('fade-in');
+                background.classList.remove('fade-out');
+            }
+        });
+
+        close.addEventListener('click', function() {
+            // box.classList.remove('aktifPopup');
+            // background.classList.remove('aktifPopup');
+            setTimeout(() => {
+                background.classList.remove('aktifPopup');
+                box.classList.remove('aktifPopup');
+            }, 300);
+            box.classList.remove('scale-in-center');
+            box.classList.add('scale-out-center');
+            background.classList.remove('fade-in');
+            background.classList.add('fade-out');
+        });
+
+        background.addEventListener('click', function() {
+            // box.classList.remove('aktifPopup');
+            // background.classList.remove('aktifPopup');
+            setTimeout(() => {
+                background.classList.remove('aktifPopup');
+                box.classList.remove('aktifPopup');
+            }, 300);
+            box.classList.remove('scale-in-center');
+            box.classList.add('scale-out-center');
+            background.classList.remove('fade-in');
+            background.classList.add('fade-out');
+        });
+    });
+</script>
+
+<script> //Nilai data barang
+    var activeTarget = 'input'; // default: form input
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // simpan target aktif saat buka popup
+        $(document).on('click', '.tombolDataBarangPopup', function() {
+            activeTarget = $(this).data('target');
+        });
+
+        // klik baris barang
+        $(document).on('click', '.pilih-barang', function() {
+            var kode = $(this).data('kode');
+            var serial = $(this).data('serial');
+            var nopo = $(this).data('nopo');
+            var jenis = $(this).data('jenis');
+            var merek = $(this).data('merek');
+            var tgl_pembelian = $(this).data('tglpembelian');
+            var type = $(this).data('type');
+            var satuan = $(this).data('satuan');
+            var cpu = $(this).data('cpu');
+            var os = $(this).data('os');
+            var ram = $(this).data('ram');
+            var storage = $(this).data('storage');
+            var gpu = $(this).data('gpu');
+            var displays = $(this).data('displays');
+            var lain = $(this).data('lain');
+            var merkmonitor = $(this).data('merkmonitor');
+            var snmonitor = $(this).data('snmonitor');
+            var merkkeyboard = $(this).data('merkkeyboard');
+            var snkeyboard = $(this).data('snkeyboard');
+            var merkmouse = $(this).data('merkmouse');
+            var snmouse = $(this).data('snmouse');
+            var qtyid = $(this).data('qtyid');
+            var user = $(this).data('user');
+
+            if (activeTarget === 'edit') {
+                $('#kode_edit').val(kode);
+                $('#serial_number_edit').val(serial);
+                $('#nomor_po_edit').val(nopo);
+                $('#jenis_perangkat_edit').val(jenis);
+                $('#merek_edit').val(merek);
+                $('#tanggal_pembelian_edit').val(tgl_pembelian);
+                $('#type_edit').val(type);
+                $('#satuan_edit').val(satuan);
+                $('#cpu_edit').val(cpu);
+                $('#os_edit').val(os);
+                $('#ram_edit').val(ram);
+                $('#storage_edit').val(storage);
+                $('#gpu_edit').val(gpu);
+                $('#displays_edit').val(displays);
+                $('#lain_edit').val(lain);
+                $('#merkmonitor_edit').val(merkmonitor);
+                $('#snmonitor_edit').val(snmonitor);
+                $('#merkkeyboard_edit').val(merkkeyboard);
+                $('#snkeyboard_edit').val(snkeyboard);
+                $('#merkmouse_edit').val(merkmouse);
+                $('#snmouse_edit').val(snmouse);
+                $('#qtyid_edit').val(qtyid);
+                $('#user_edit').val(user);
+            } else {
+                $('#kode_input').val(kode);
+                $('#serial_number_input').val(serial);
+                $('#nomor_po_input').val(nopo);
+                $('#jenis_perangkat_input').val(jenis);
+                $('#merek_input').val(merek);
+                $('#tanggal_pembelian_input').val(tgl_pembelian);
+                $('#type_input').val(type);
+                $('#satuan_input').val(satuan);
+                $('#cpu_input').val(cpu);
+                $('#os_input').val(os);
+                $('#ram_input').val(ram);
+                $('#storage_input').val(storage);
+                $('#gpu_input').val(gpu);
+                $('#displays_input').val(displays);
+                $('#lain_input').val(lain);
+                $('#merkmonitor_input').val(merkmonitor);
+                $('#snmonitor_input').val(snmonitor);
+                $('#merkkeyboard_input').val(merkkeyboard);
+                $('#snkeyboard_input').val(snkeyboard);
+                $('#merkmouse_input').val(merkmouse);
+                $('#snmouse_input').val(snmouse);
+                $('#qtyid_input').val(qtyid);
+                $('#user_input').val(user);
+            }
+
+            // Tutup popup
+            $('#popupBoxDataBarang').removeClass('aktifPopup');
+            $('#popupBG2').removeClass('aktifPopup');
+        });
+    });
+</script>
+
+<script>//DataTables
+    $(document).ready(function () {
+        $('#myTable2').DataTable({
+        responsive: true,
+        autoWidth: true,
+        language: {
+            url: "../assets/json/id.json"
+        },
+        scrollY: "250px",     
+        scrollCollapse: true, 
+        paging: true,
+        columnDefs: [
+        ]
+        });
+    });
+</script>
+
+<script>//Menghilangkan alert
+        const alert = document.querySelector('.infoin-approval');
+        setTimeout(() => {
+                alert.classList.add('fade-out');
+                alert.classList.remove('fade-in');
+            }, 3000);
+        setTimeout(() => {
+            alert.style.display = 'none';
+            }, 3500);  
+</script>
+
+<script>//Info Akun
+    document.addEventListener('DOMContentLoaded', function () {
+        const button = document.getElementById('tombolAkun');
+        const box = document.getElementById('akunInfo');
+
+        button.addEventListener('click', function () {
+            if (box.classList.contains('display-state')) {
+                // Buka
+                box.classList.remove('display-state');
+                setTimeout(() => {
+                    box.classList.add('aktif');
+                }, 200);
+            } else {
+                // Tutup
+                box.classList.remove('aktif');
+                setTimeout(() => {
+                    box.classList.add('display-state');
+                }, 200);
+            }
+        });
+    });
+</script>
+
+<!-- Bootstrap 5 -->
+<script src="../assets/bootstrap-5.3.6-dist/js/bootstrap.min.js"></script>
+
+<!-- popperjs Bootstrap 5 -->
+<script src="../assets/js/popper.min.js"></script>
+
+<!-- AdminLTE -->
+<script src="../assets/adminlte/js/adminlte.js"></script>
+
+<!-- OverlayScrollbars -->
+<script src="../assets/js/overlayscrollbars.browser.es6.min.js"></script>
+
+
+<script> //Konfigurasi OverlayScrollbars
+
+    //-----------------------------------------------------------------------------------
+    const SELECTOR_SIDEBAR_WRAPPER = '.sidebar-wrapper';
+    const Default = {
+        scrollbarTheme: 'os-theme-light',
+        scrollbarAutoHide: 'leave',
+        scrollbarClickScroll: true,
+    };
+    document.addEventListener('DOMContentLoaded', function () {
+        const sidebarWrapper = document.querySelector(SELECTOR_SIDEBAR_WRAPPER);
+        if (sidebarWrapper && typeof OverlayScrollbarsGlobal?.OverlayScrollbars !== 'undefined') {
+        OverlayScrollbarsGlobal.OverlayScrollbars(sidebarWrapper, {
+            scrollbars: {
+            theme: Default.scrollbarTheme,
+            autoHide: Default.scrollbarAutoHide,
+            clickScroll: Default.scrollbarClickScroll,
+            },
+        });
+        }
+    });
+    //-----------------------------------------------------------------------------------
+
+</script>
+
+<script> //Sidebar
+
+    //-----------------------------------------------------------------------------------
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('show');
+
+        // Event listener satu kali untuk klik luar
+        if (sidebar.classList.contains('show')) {
+            document.addEventListener('click', handleClickOutsideSidebar);
+        } else {
+            document.removeEventListener('click', handleClickOutsideSidebar);
+        }
+    }
+
+    function handleClickOutsideSidebar(event) {
+        const sidebar = document.getElementById('sidebar');
+        const toggleButton = event.target.closest("button[onclick='toggleSidebar()']");
+        
+        if (!sidebar.contains(event.target) && !toggleButton) {
+            sidebar.classList.remove('show');
+            document.removeEventListener('click', handleClickOutsideSidebar);
+        }
+    }
+    //-----------------------------------------------------------------------------------
+
+</script>
+
+<script>//Tanggal
+
+    //-----------------------------------------------------------------------------------
+    function updateDate() {
+        const now = new Date();
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        const formattedDate = now.toLocaleDateString('id-ID', options);
+        document.getElementById('date').textContent = formattedDate;
+    }
+    setInterval(updateDate, 1000); // Update setiap detik
+    updateDate(); // Panggil langsung saat halaman load
+    //-----------------------------------------------------------------------------------
+
+</script>
+
+<script> // Jam Digital
+    //-----------------------------------------------------------------------------------
+
+    function updateClock() {
+        const now = new Date();
+        const jam = String(now.getHours()).padStart(2, '0');
+        const menit = String(now.getMinutes()).padStart(2, '0');
+        const detik = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('clock').textContent = `${jam}:${menit}:${detik}`;
+    }
+
+    setInterval(updateClock, 1000);
+    updateClock(); // Panggil langsung saat halaman load
+    //-----------------------------------------------------------------------------------
+
+</script>
+
+</body>
+</html>
