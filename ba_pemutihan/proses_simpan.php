@@ -410,19 +410,6 @@ $is_pt_site = in_array($pt, $pt_site_list, true);
 $is_pt_pks = in_array($pt, $pt_pks_list, true);
 $is_kebun_1 = in_array($pt, $kebun_1_list, true);
 
-
-
-// /* input khusus HO baru */
-// $dept_pengguna = isset($_POST['dept_pengguna']) ? trim($_POST['dept_pengguna']) : '';
-// $jabatan_dept_pengguna = isset($_POST['jabatan_dept_pengguna']) ? trim($_POST['jabatan_dept_pengguna']) : '';
-
-// /* input tambahan non-HO */
-// $diketahui1_site_input = isset($_POST['diketahui1_site']) ? trim($_POST['diketahui1_site']) : '';
-// $disetujui1_site_input = isset($_POST['disetujui1_site']) ? trim($_POST['disetujui1_site']) : '';
-
-// $jabatan_diketahui1_site_input = isset($_POST['jabatan_diketahui1_site']) ? trim($_POST['jabatan_diketahui1_site']) : '';
-// $jabatan_disetujui1_site_input = isset($_POST['jabatan_disetujui1_site']) ? trim($_POST['jabatan_disetujui1_site']) : '';
-
 /* input pengguna HO dan non-HO */
 $dept_pengguna = isset($_POST['dept_pengguna']) ? trim($_POST['dept_pengguna']) : '';
 $jabatan_dept_pengguna = isset($_POST['jabatan_dept_pengguna']) ? trim($_POST['jabatan_dept_pengguna']) : '';
@@ -432,20 +419,6 @@ if ($nomor_ba === '' || $tanggal === '' || $pt === '') {
     header("Location: ba_pemutihan.php?status=gagal");
     exit();
 }
-
-// if ($pt === 'PT.MSAL (HO)') {
-//     if ($dept_pengguna === '' || $jabatan_dept_pengguna === '') {
-//         $_SESSION['message'] = "Data pengguna HO belum lengkap.";
-//         header("Location: ba_pemutihan.php?status=gagal");
-//         exit();
-//     }
-// } else {
-//     if ($pembuat === '' || $pemeriksa === '' || $diketahui1_site_input === '' || $disetujui1_site_input === '') {
-//         $_SESSION['message'] = "Data pengguna non HO belum lengkap.";
-//         header("Location: ba_pemutihan.php?status=gagal");
-//         exit();
-//     }
-// }
 
 if ($pt === 'PT.MSAL (HO)') {
     if ($dept_pengguna === '' || $jabatan_dept_pengguna === '') {
@@ -483,9 +456,6 @@ if ($id_pt <= 0) {
 /*
 |--------------------------------------------------------------------------
 | Aktor pemutihan
-|--------------------------------------------------------------------------
-| HO tetap pakai alur lama.
-| Non-HO isi kolom site baru, dan kolom lama tetap diisi untuk jaga kompatibilitas.
 |--------------------------------------------------------------------------
 */
 $dept_head_mis = getNamaKaryawanByJabatanDepartemen($koneksi, 'Dept. Head', 'MIS');
@@ -556,91 +526,6 @@ if ($pt === 'PT.MSAL (HO)') {
     }
 }
 
-// /* default kolom site */
-// $pembuat_site = '-';
-// $jabatan_pembuat_site = '-';
-// $pemeriksa_site = '-';
-// $jabatan_pemeriksa_site = '-';
-
-// $diketahui1_site = '-';
-// $jabatan_diketahui1_site = '-';
-
-// $disetujui1_site = '-';
-// $jabatan_disetujui1_site = '-';
-
-// $diketahui2_site = '-';
-// $jabatan_diketahui2_site = '-';
-
-// $diperiksa_site = '-';
-// $jabatan_diperiksa_site = '-';
-
-// $mengetahui_site = '-';
-// $jabatan_mengetahui_site = '-';
-
-// if ($pt === 'PT.MSAL (HO)') {
-//     $jabatan_pembuat   = getJabatanLengkapDataKaryawan($koneksi, $pembuat);
-//     $jabatan_pemeriksa = getJabatanLengkapDataKaryawan($koneksi, $pemeriksa);
-// } else {
-//     $jabatan_pembuat   = getPosisiKaryawanTest($koneksi, $pembuat, $pt);
-//     $jabatan_pemeriksa = getPosisiKaryawanTest($koneksi, $pemeriksa, $pt);
-// }
-
-// /* fallback dari hidden form */
-// if ($jabatan_pembuat === '-' && isset($_POST['jabatan_pembuat']) && trim($_POST['jabatan_pembuat']) !== '') {
-//     $jabatan_pembuat = trim($_POST['jabatan_pembuat']);
-// }
-// if ($jabatan_pemeriksa === '-' && isset($_POST['jabatan_pemeriksa']) && trim($_POST['jabatan_pemeriksa']) !== '') {
-//     $jabatan_pemeriksa = trim($_POST['jabatan_pemeriksa']);
-// }
-
-// if ($pt !== 'PT.MSAL (HO)') {
-//     /*
-//     |--------------------------------------------------------------------------
-//     | Kolom site
-//     |--------------------------------------------------------------------------
-//     */
-//     $pembuat_site = $pembuat;
-//     $jabatan_pembuat_site = $jabatan_pembuat;
-
-//     $pemeriksa_site = $pemeriksa;
-//     $jabatan_pemeriksa_site = $jabatan_pemeriksa;
-
-//     $diketahui1_site = $diketahui1_site_input;
-//     $jabatan_diketahui1_site = getPosisiKaryawanTest($koneksi, $diketahui1_site, $pt);
-//     if ($jabatan_diketahui1_site === '-' && $jabatan_diketahui1_site_input !== '') {
-//         $jabatan_diketahui1_site = $jabatan_diketahui1_site_input;
-//     }
-
-//     $disetujui1_site = $disetujui1_site_input;
-//     $jabatan_disetujui1_site = 'Kepala Project';
-
-//     $diketahui2_site = $dept_head_mis;
-//     $jabatan_diketahui2_site = $jabatan_dept_head_mis;
-
-//     $diperiksa_site = $dept_head_hro;
-//     $jabatan_diperiksa_site = $jabatan_dept_head_hro;
-
-//     $mengetahui_site = getNamaKaryawanByPosisi($koneksi, 'CEO');
-//     $jabatan_mengetahui_site = 'CEO';
-
-//     /*
-//     |--------------------------------------------------------------------------
-//     | Kolom lama yang sudah diganti ke ..._site dikosongkan
-//     |--------------------------------------------------------------------------
-//     */
-//     $pembuat = '';
-//     $jabatan_pembuat = '';
-
-//     $pemeriksa = '';
-//     $jabatan_pemeriksa = '';
-
-//     $diketahui1 = '';
-//     $jabatan_diketahui1 = '';
-
-//     $diketahui2 = '';
-//     $jabatan_diketahui2 = '';
-// }
-
 /* default tambahan aktor non-HO baru */
 $asisten_pga = '-';
 $jabatan_asisten_pga = '-';
@@ -664,14 +549,6 @@ $vice_president = '-';
 $jabatan_vice_president = '-';
 
 if ($pt !== 'PT.MSAL (HO)') {
-    /*
-    |--------------------------------------------------------------------------
-    | Non-HO baru:
-    | - aktor utama mengikuti HO
-    | - tanpa logika departemen_pengguna = HRO
-    | - tambahan aktor berdasarkan jenis PT
-    |--------------------------------------------------------------------------
-    */
 
     /* tambahan untuk PT SITE dan PT PKS */
     if ($is_pt_site || $is_pt_pks) {
@@ -848,131 +725,6 @@ try {
 
         $id_ba = $stmt->insert_id;
         $stmt->close();
-    // } else {
-    //     $sql = "INSERT INTO berita_acara_pemutihan (
-    //         tanggal,
-    //         nomor_ba,
-    //         nama_pembuat,
-    //         pt,
-    //         id_pt,
-
-    //         pembuat,
-    //         jabatan_pembuat,
-    //         pembuat_site,
-    //         jabatan_pembuat_site,
-
-    //         pemeriksa,
-    //         jabatan_pemeriksa,
-    //         pemeriksa_site,
-    //         jabatan_pemeriksa_site,
-
-    //         diketahui1,
-    //         jabatan_diketahui1,
-    //         diketahui1_site,
-    //         jabatan_diketahui1_site,
-
-    //         diketahui2,
-    //         jabatan_diketahui2,
-    //         disetujui1_site,
-    //         jabatan_disetujui1_site,
-
-    //         diketahui3,
-    //         jabatan_diketahui3,
-    //         diketahui2_site,
-    //         jabatan_diketahui2_site,
-
-    //         diperiksa_site,
-    //         jabatan_diperiksa_site,
-
-    //         dibukukan,
-    //         jabatan_dibukukan,
-
-    //         disetujui1,
-    //         jabatan_disetujui1,
-    //         disetujui2,
-    //         jabatan_disetujui2,
-    //         disetujui3,
-    //         jabatan_disetujui3,
-
-    //         mengetahui_site,
-    //         jabatan_mengetahui_site
-    //     ) VALUES (
-    //         ?, ?, ?, ?, ?,
-    //         ?, ?, ?, ?,
-    //         ?, ?, ?, ?,
-    //         ?, ?, ?, ?,
-    //         ?, ?, ?, ?,
-    //         ?, ?, ?, ?,
-    //         ?, ?,
-    //         ?, ?,
-    //         ?, ?, ?, ?, ?, ?,
-    //         ?, ?
-    //     )";
-
-    //     $stmt = $koneksi->prepare($sql);
-    //     if (!$stmt) {
-    //         throw new Exception("Prepare insert berita_acara_pemutihan non HO gagal: " . $koneksi->error);
-    //     }
-
-    //     $types_non_ho = "ssssi" . str_repeat("s", 32);
-
-    //     $stmt->bind_param(
-    //         $types_non_ho,
-    //         $tanggal,
-    //         $nomor_ba,
-    //         $nama_pembuat,
-    //         $pt,
-    //         $id_pt,
-
-    //         $pembuat,
-    //         $jabatan_pembuat,
-    //         $pembuat_site,
-    //         $jabatan_pembuat_site,
-
-    //         $pemeriksa,
-    //         $jabatan_pemeriksa,
-    //         $pemeriksa_site,
-    //         $jabatan_pemeriksa_site,
-
-    //         $diketahui1,
-    //         $jabatan_diketahui1,
-    //         $diketahui1_site,
-    //         $jabatan_diketahui1_site,
-
-    //         $diketahui2,
-    //         $jabatan_diketahui2,
-    //         $disetujui1_site,
-    //         $jabatan_disetujui1_site,
-
-    //         $diketahui3,
-    //         $jabatan_diketahui3,
-    //         $diketahui2_site,
-    //         $jabatan_diketahui2_site,
-
-    //         $diperiksa_site,
-    //         $jabatan_diperiksa_site,
-
-    //         $dibukukan,
-    //         $jabatan_dibukukan,
-
-    //         $disetujui1,
-    //         $jabatan_disetujui1,
-    //         $disetujui2,
-    //         $jabatan_disetujui2,
-    //         $disetujui3,
-    //         $jabatan_disetujui3,
-
-    //         $mengetahui_site,
-    //         $jabatan_mengetahui_site
-    //     );
-
-    //     if (!$stmt->execute()) {
-    //         throw new Exception("Execute insert berita_acara_pemutihan non HO gagal: " . $stmt->error);
-    //     }
-
-    //     $id_ba = $stmt->insert_id;
-    //     $stmt->close();
-    // }
 
     } else {
         $columns = array(
