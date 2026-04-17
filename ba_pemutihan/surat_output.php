@@ -1,4 +1,5 @@
 <?php
+
 /**
  * surat_output.php
  * Dinamis dari:
@@ -49,7 +50,7 @@ function formatPTHeader($id_pt)
         7 => 'PT PERSADA ERA AGRO KENCANA PKS',
         8 => 'PT PERSADA ERA AGRO KENCANA SITE',
         11 => 'PT WANA CATUR JAYA UTAMA SITE',
-        12 => 'PT WANA CATUR JAYA UTAMA PKS' 
+        12 => 'PT WANA CATUR JAYA UTAMA PKS'
     );
     return $id_pt_map[$id_pt];
 }
@@ -86,26 +87,26 @@ function formatTanggalIndo($date)
 
     return $hari . '-' . $bulan[$bulanIndex] . '-' . $tahun;
 }
-function formatKodeSurat($nomor,$id_pt,$date)
+function formatKodeSurat($nomor, $id_pt, $date)
 {
     if (empty($date) || $date === '0000-00-00') {
         return '-';
     }
 
-        $id_pt_map = array(
-            1 => 'MSALHO',
-            2 => 'MSALPKS',
-            3 => 'MSALSITE',
-            4 => 'PSAMPKS',
-            5 => 'PSAMSITE',
-            6 => 'MAPA',
-            7 => 'PEAKPKS',
-            8 => 'PEAKSITE',
-            11 => 'WCJUSITE',
-            12 => 'WCJUPKS' 
-        );
+    $id_pt_map = array(
+        1 => 'MSALHO',
+        2 => 'MSALPKS',
+        3 => 'MSALSITE',
+        4 => 'PSAMPKS',
+        5 => 'PSAMSITE',
+        6 => 'MAPA',
+        7 => 'PEAKPKS',
+        8 => 'PEAKSITE',
+        11 => 'WCJUSITE',
+        12 => 'WCJUPKS'
+    );
 
-        $bulan = array(
+    $bulan = array(
         1  => "01",
         2  => "02",
         3  => "03",
@@ -314,114 +315,133 @@ $totalHo     = count($visibleHo);
 ?>
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
     <title>Surat Output - Permohonan Penghapusan Aset</title>
     <link rel="stylesheet" href="../assets/bootstrap-5.3.6-dist/css/bootstrap.min.css" />
     <style>
-        .wrapper{
+        .wrapper {
             width: 100%;
             height: max-content;
             margin: 0;
             padding: 0;
         }
 
-        .wrapper-2{
+        .wrapper-2 {
             border: 1px solid black;
             width: 100%;
             height: max-content;
             margin: 0;
             padding: 0;
         }
+
         .wrapper-2 td,
-        .wrapper-2 tr
-        {
+        .wrapper-2 tr {
             border: 1px solid black;
         }
-        .custom-fs{
+
+        .custom-fs {
             font-size: 8pt;
         }
-        .custom-fs-10{
+
+        .custom-fs-10 {
             font-size: 10pt;
         }
-        .wrapper-2 td h1{
+
+        .wrapper-2 td h1 {
             font-size: 6pt;
         }
+
         .wrapper-2 tbody td {
             text-align: center;
         }
-        .wrapper-2 tbody td p{
+
+        .wrapper-2 tbody td p {
             font-size: 6pt;
             margin: 0;
             padding: 0;
         }
-        .custom-gap{
+
+        .custom-gap {
             width: 82%;
         }
-        .custom-gap-2{
+
+        .custom-gap-2 {
             width: 7%;
         }
-        .custom-gap-3{
+
+        .custom-gap-3 {
             width: 11%;
         }
 
-        .wrapper-ttd{
+        .wrapper-ttd {
             width: 90%;
             height: max-content;
             margin: 0;
             padding: 0;
         }
-        .wrapper-ttd tr td{
+
+        .wrapper-ttd tr td {
             border: 1px solid black;
             width: 100px;
             position: relative;
         }
-        .wrapper-ttd p{
+
+        .wrapper-ttd p {
             font-size: 6pt;
             z-index: 1;
             position: absolute;
         }
-        .wrapper-ttd tr td img{
+
+        .wrapper-ttd tr td img {
             width: 42pt;
         }
+
         .wrapper-ttd thead td h1,
-        .wrapper-ttd tbody td h1
-        {
+        .wrapper-ttd tbody td h1 {
             font-size: 6pt;
             margin: 0;
             padding: 0;
             font-weight: bold;
         }
-        .wrapper-paraf{
+
+        .wrapper-paraf {
             width: 10%;
             height: max-content;
             margin: 0;
             padding: 0;
         }
-        .wrapper-paraf tr td{
+
+        .wrapper-paraf tr td {
             display: flex;
             justify-content: end;
         }
-        .wrapper-paraf tr td img{
+
+        .wrapper-paraf tr td img {
             width: 38pt;
         }
-        .wrapper-img{
+
+        .wrapper-img {
             width: 100%;
             height: max-content;
             margin: 0;
             padding: 0;
             text-align: center;
         }
-        .wrapper-img tr td img{
+
+        .wrapper-img tr td img {
             max-width: 120pt;
         }
-        .wrapper-img tr td p{
+
+        .wrapper-img tr td p {
             margin: 0;
             padding: 0;
             font-size: 8pt;
         }
     </style>
 </head>
+
 <body class="p-1">
 
     <table class="wrapper">
@@ -445,7 +465,7 @@ $totalHo     = count($visibleHo);
                 <h1 class="m-0 p-0 custom-fs">Nomor</h1>
             </td>
             <td class="custom-gap-3">
-                <h1 class="m-0 p-0 custom-fs"><?php echo e(formatKodeSurat($ba['nomor_ba'],$ba['id_pt'],$ba['tanggal'])); ?></h1>
+                <h1 class="m-0 p-0 custom-fs"><?php echo e(formatKodeSurat($ba['nomor_ba'], $ba['id_pt'], $ba['tanggal'])); ?></h1>
             </td>
         </tr>
         <tr>
@@ -463,20 +483,44 @@ $totalHo     = count($visibleHo);
     <table class="wrapper-2">
         <thead>
             <tr>
-                <td class="text-center" rowspan="2"><h1 class="m-0 p-0 fw-bold">No</h1></td>
-                <td class="text-center" colspan="8"><h1 class="m-0 p-0 fw-bold">SPESIFIKASI BARANG INVENTARIS</h1></td>
-                <td rowspan="2" class="text-center"><h1 class="m-0 p-0 fw-bold">LOKASI ASET/PT</h1></td>
-                <td rowspan="2" class="text-center"><h1 class="m-0 p-0 fw-bold">NAMA PENGGUNA</h1></td>
-                <td rowspan="2" class="text-center"><h1 class="m-0 p-0 fw-bold">KETERANGAN</h1></td>
+                <td class="text-center" rowspan="2">
+                    <h1 class="m-0 p-0 fw-bold">No</h1>
+                </td>
+                <td class="text-center" colspan="8">
+                    <h1 class="m-0 p-0 fw-bold">SPESIFIKASI BARANG INVENTARIS</h1>
+                </td>
+                <td rowspan="2" class="text-center">
+                    <h1 class="m-0 p-0 fw-bold">LOKASI ASET/PT</h1>
+                </td>
+                <td rowspan="2" class="text-center">
+                    <h1 class="m-0 p-0 fw-bold">NAMA PENGGUNA</h1>
+                </td>
+                <td rowspan="2" class="text-center">
+                    <h1 class="m-0 p-0 fw-bold">KETERANGAN</h1>
+                </td>
             </tr>
             <tr>
-                <td class="text-center"><h1 class="m-0 p-0 fw-bold">NAMA BARANG</h1></td>
-                <td class="text-center"><h1 class="m-0 p-0 fw-bold">JUMLAH BARANG</h1></td>
-                <td class="text-center"><h1 class="m-0 p-0 fw-bold">MERK/TYPE</h1></td>
-                <td class="text-center"><h1 class="m-0 p-0 fw-bold">SERIAL NUMBER</h1></td>
-                <td class="text-center"><h1 class="m-0 p-0 fw-bold">NOMOR PO</h1></td>
-                <td class="text-center"><h1 class="m-0 p-0 fw-bold">TAHUN PEROLEHAN</h1></td>
-                <td class="text-center"><h1 class="m-0 p-0 fw-bold">HARGA</h1></td>
+                <td class="text-center">
+                    <h1 class="m-0 p-0 fw-bold">NAMA BARANG</h1>
+                </td>
+                <td class="text-center">
+                    <h1 class="m-0 p-0 fw-bold">JUMLAH BARANG</h1>
+                </td>
+                <td class="text-center">
+                    <h1 class="m-0 p-0 fw-bold">MERK/TYPE</h1>
+                </td>
+                <td class="text-center">
+                    <h1 class="m-0 p-0 fw-bold">SERIAL NUMBER</h1>
+                </td>
+                <td class="text-center">
+                    <h1 class="m-0 p-0 fw-bold">NOMOR PO</h1>
+                </td>
+                <td class="text-center">
+                    <h1 class="m-0 p-0 fw-bold">TAHUN PEROLEHAN</h1>
+                </td>
+                <td class="text-center">
+                    <h1 class="m-0 p-0 fw-bold">HARGA</h1>
+                </td>
             </tr>
         </thead>
         <tbody>
@@ -484,33 +528,77 @@ $totalHo     = count($visibleHo);
                 <?php $no = 1; ?>
                 <?php foreach ($barangList as $barang) { ?>
                     <tr>
-                        <td class="text-center"><p><?php echo $no; ?></p></td>
-                        <td><p><?php echo e($barang['coa']); ?></p></td>
-                        <td class="text-center"><p>1</p></td>
-                        <td><p><?php echo e($barang['merk']); ?></p></td>
-                        <td><p><?php echo e($barang['sn']); ?></p></td>
-                        <td><p><?php echo e($barang['po']); ?></p></td>
-                        <td class="text-center"><p><?php echo e($barang['tahun_perolehan']); ?></p></td>
-                        <td><p><?php echo e(formatRupiah($barang['harga_beli'])); ?></p></td>
-                        <td colspan="2"><p><?php echo e($barang['pt']); ?></p></td>
-                        <td><p><?php echo e($barang['user']); ?></p></td>
-                        <td><p><?php echo e($barang['kondisi']); ?></p></td>
+                        <td class="text-center">
+                            <p><?php echo $no; ?></p>
+                        </td>
+                        <td>
+                            <p><?php echo e($barang['coa']); ?></p>
+                        </td>
+                        <td class="text-center">
+                            <p>1</p>
+                        </td>
+                        <td>
+                            <p><?php echo e($barang['merk']); ?></p>
+                        </td>
+                        <td>
+                            <p><?php echo e($barang['sn']); ?></p>
+                        </td>
+                        <td>
+                            <p><?php echo e($barang['po']); ?></p>
+                        </td>
+                        <td class="text-center">
+                            <p><?php echo e($barang['tahun_perolehan']); ?></p>
+                        </td>
+                        <td>
+                            <p><?php echo e(formatRupiah($barang['harga_beli'])); ?></p>
+                        </td>
+                        <td colspan="2">
+                            <p><?php echo e($barang['pt']); ?></p>
+                        </td>
+                        <td>
+                            <p><?php echo e($barang['user']); ?></p>
+                        </td>
+                        <td>
+                            <p><?php echo e($barang['kondisi']); ?></p>
+                        </td>
                     </tr>
                     <?php $no++; ?>
                 <?php } ?>
             <?php } else { ?>
                 <tr>
-                    <td class="text-center"><p>1</p></td>
-                    <td><p></p></td>
-                    <td><p></p></td>
-                    <td><p></p></td>
-                    <td><p></p></td>
-                    <td><p></p></td>
-                    <td><p></p></td>
-                    <td><p></p></td>
-                    <td colspan="2"><p></p></td>
-                    <td><p></p></td>
-                    <td><p></p></td>
+                    <td class="text-center">
+                        <p>1</p>
+                    </td>
+                    <td>
+                        <p></p>
+                    </td>
+                    <td>
+                        <p></p>
+                    </td>
+                    <td>
+                        <p></p>
+                    </td>
+                    <td>
+                        <p></p>
+                    </td>
+                    <td>
+                        <p></p>
+                    </td>
+                    <td>
+                        <p></p>
+                    </td>
+                    <td>
+                        <p></p>
+                    </td>
+                    <td colspan="2">
+                        <p></p>
+                    </td>
+                    <td>
+                        <p></p>
+                    </td>
+                    <td>
+                        <p></p>
+                    </td>
                 </tr>
             <?php } ?>
         </tbody>
@@ -543,27 +631,41 @@ $totalHo     = count($visibleHo);
             <thead>
                 <tr>
                     <?php if ($totalPabrik > 0) { ?>
-                        <td colspan="<?php echo $totalPabrik; ?>"><h1>Pabrik (Pemohon)</h1></td>
+                        <td colspan="<?php echo $totalPabrik; ?>">
+                            <h1>Pabrik (Pemohon)</h1>
+                        </td>
                     <?php } ?>
                     <?php if ($totalHo > 0) { ?>
-                        <td colspan="<?php echo $totalHo; ?>"><h1>Head Office (HO)</h1></td>
+                        <td colspan="<?php echo $totalHo; ?>">
+                            <h1>Head Office (HO)</h1>
+                        </td>
                     <?php } ?>
                 </tr>
                 <tr>
                     <?php if ($pabrikDibuat > 0) { ?>
-                        <td colspan="<?php echo $pabrikDibuat; ?>"><h1>Dibuat Oleh</h1></td>
+                        <td colspan="<?php echo $pabrikDibuat; ?>">
+                            <h1>Dibuat Oleh</h1>
+                        </td>
                     <?php } ?>
                     <?php if ($pabrikDiperiksa > 0) { ?>
-                        <td colspan="<?php echo $pabrikDiperiksa; ?>"><h1>Diperiksa Oleh</h1></td>
+                        <td colspan="<?php echo $pabrikDiperiksa; ?>">
+                            <h1>Diperiksa Oleh</h1>
+                        </td>
                     <?php } ?>
                     <?php if ($pabrikDisetujui > 0) { ?>
-                        <td colspan="<?php echo $pabrikDisetujui; ?>"><h1>Disetujui Oleh</h1></td>
+                        <td colspan="<?php echo $pabrikDisetujui; ?>">
+                            <h1>Disetujui Oleh</h1>
+                        </td>
                     <?php } ?>
                     <?php if ($hoDiperiksa > 0) { ?>
-                        <td colspan="<?php echo $hoDiperiksa; ?>"><h1>Diperiksa Oleh</h1></td>
+                        <td colspan="<?php echo $hoDiperiksa; ?>">
+                            <h1>Diperiksa Oleh</h1>
+                        </td>
                     <?php } ?>
                     <?php if ($hoDisetujui > 0) { ?>
-                        <td colspan="<?php echo $hoDisetujui; ?>"><h1>Disetujui Oleh</h1></td>
+                        <td colspan="<?php echo $hoDisetujui; ?>">
+                            <h1>Disetujui Oleh</h1>
+                        </td>
                     <?php } ?>
                 </tr>
             </thead>
@@ -594,13 +696,17 @@ $totalHo     = count($visibleHo);
                 <tr>
                     <?php foreach ($pabrikIndexes as $idx) { ?>
                         <?php if (isFilledActor($signatureData[$idx]['actor'])) { ?>
-                            <td><h1><?php echo e($signatureData[$idx]['label']); ?></h1></td>
+                            <td>
+                                <h1><?php echo e($signatureData[$idx]['label']); ?></h1>
+                            </td>
                         <?php } ?>
                     <?php } ?>
 
                     <?php foreach ($hoIndexes as $idx) { ?>
                         <?php if (isFilledActor($signatureData[$idx]['actor'])) { ?>
-                            <td><h1><?php echo e($signatureData[$idx]['label']); ?></h1></td>
+                            <td>
+                                <h1><?php echo e($signatureData[$idx]['label']); ?></h1>
+                            </td>
                         <?php } ?>
                     <?php } ?>
                 </tr>
@@ -617,4 +723,5 @@ $totalHo     = count($visibleHo);
 
     <script src="../assets/bootstrap-5.3.6-dist/js/bootstrap.min.js"></script>
 </body>
+
 </html>
