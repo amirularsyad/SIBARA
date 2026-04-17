@@ -37,6 +37,22 @@ function isFilledActor($value)
     $value = trim((string) $value);
     return ($value !== '' && $value !== '-');
 }
+function formatPTHeader($id_pt)
+{
+    $id_pt_map = array(
+        1 => 'PT MULIA SAWIT AGRO LESTARI',
+        2 => 'PT MULIA SAWIT AGRO LESTARI PKS',
+        3 => 'PT MULIA SAWIT AGRO LESTARI SITE',
+        4 => 'PT PERSADA SEJAHTERA AGRO MAKMUR PKS',
+        5 => 'PT PERSADA SEJAHTERA AGRO MAKMUR SITE',
+        6 => 'PT MITRA AGRO PERSADA ABADI',
+        7 => 'PT PERSADA ERA AGRO KENCANA PKS',
+        8 => 'PT PERSADA ERA AGRO KENCANA SITE',
+        11 => 'PT WANA CATUR JAYA UTAMA SITE',
+        12 => 'PT WANA CATUR JAYA UTAMA PKS' 
+    );
+    return $id_pt_map[$id_pt];
+}
 
 function formatTanggalIndo($date)
 {
@@ -70,6 +86,54 @@ function formatTanggalIndo($date)
 
     return $hari . '-' . $bulan[$bulanIndex] . '-' . $tahun;
 }
+function formatKodeSurat($nomor,$id_pt,$date)
+{
+    if (empty($date) || $date === '0000-00-00') {
+        return '-';
+    }
+
+        $id_pt_map = array(
+            1 => 'MSALHO',
+            2 => 'MSALPKS',
+            3 => 'MSALSITE',
+            4 => 'PSAMPKS',
+            5 => 'PSAMSITE',
+            6 => 'MAPA',
+            7 => 'PEAKPKS',
+            8 => 'PEAKSITE',
+            11 => 'WCJUSITE',
+            12 => 'WCJUPKS' 
+        );
+
+        $bulan = array(
+        1  => "01",
+        2  => "02",
+        3  => "03",
+        4  => "04",
+        5  => "05",
+        6  => "06",
+        7  => "07",
+        8  => "08",
+        9  => "09",
+        10 => "10",
+        11 => "11",
+        12 => "12"
+    );
+
+
+
+    $timestamp = strtotime($date);
+    if ($timestamp === false) {
+        return $date;
+    }
+
+    $hari  = date('d', $timestamp);
+    $bulanIndex = (int) date('n', $timestamp);
+    $tahun = date('y', $timestamp);
+
+    return $nomor . '/PPA/' . $id_pt_map[$id_pt] . '/' . $bulan[$bulanIndex] . '/' . $tahun;
+}
+
 
 function formatRupiah($angka)
 {
@@ -77,7 +141,12 @@ function formatRupiah($angka)
         return '';
     }
 
-    return number_format((float) $angka, 0, ',', '.');
+    return "Rp " . number_format((float) $angka, 0, ',', '.');
+}
+
+function formatLokasiAsset($id_pt)
+{
+    return $id_pt;
 }
 
 function buildLampiranRows($lampiranList)
@@ -278,6 +347,9 @@ $totalHo     = count($visibleHo);
         .wrapper-2 td h1{
             font-size: 6pt;
         }
+        .wrapper-2 tbody td {
+            text-align: center;
+        }
         .wrapper-2 tbody td p{
             font-size: 6pt;
             margin: 0;
@@ -355,7 +427,7 @@ $totalHo     = count($visibleHo);
     <table class="wrapper">
         <tr>
             <td>
-                <h1 class="m-0 p-0 fw-bold custom-fs"><?php echo e($ba['pt']); ?></h1>
+                <h1 class="m-0 p-0 fw-bold custom-fs"><?php echo e(formatPTHeader($ba['id_pt'])); ?></h1>
             </td>
         </tr>
         <tr>
@@ -373,7 +445,7 @@ $totalHo     = count($visibleHo);
                 <h1 class="m-0 p-0 custom-fs">Nomor</h1>
             </td>
             <td class="custom-gap-3">
-                <h1 class="m-0 p-0 custom-fs"><?php echo e($ba['nomor_ba']); ?></h1>
+                <h1 class="m-0 p-0 custom-fs"><?php echo e(formatKodeSurat($ba['nomor_ba'],$ba['id_pt'],$ba['tanggal'])); ?></h1>
             </td>
         </tr>
         <tr>
@@ -420,7 +492,7 @@ $totalHo     = count($visibleHo);
                         <td><p><?php echo e($barang['po']); ?></p></td>
                         <td class="text-center"><p><?php echo e($barang['tahun_perolehan']); ?></p></td>
                         <td><p><?php echo e(formatRupiah($barang['harga_beli'])); ?></p></td>
-                        <td colspan="2"><p><?php echo e($barang['id_pt']); ?></p></td>
+                        <td colspan="2"><p><?php echo e($barang['pt']); ?></p></td>
                         <td><p><?php echo e($barang['user']); ?></p></td>
                         <td><p><?php echo e($barang['kondisi']); ?></p></td>
                     </tr>
